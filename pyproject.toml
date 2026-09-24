@@ -1,0 +1,41 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "jevkit"
+version = "0.1.0"
+description = "Jev / Kev (System One) 政策层 + 评测层统一框架：概率进，带证据的动作出"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "zbloom" }]
+keywords = ["jev", "kev", "typesafe", "system-one", "llm", "policy", "calibration", "evaluation"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = []
+
+[project.optional-dependencies]
+typesafe = ["typesafe-sdk>=0.7"]
+dev = ["pytest>=8"]
+
+[project.scripts]
+jevkit = "jevkit.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/zbloom/jevkit"
+
+[tool.hatch.build.targets.wheel]
+packages = ["jevkit"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,0 +1,41 @@
+{
+  "version": "triage-v1",
+  "gates": [
+    {
+      "question": "department",
+      "signal": "confidence",
+      "tiers": [
+        {
+          "action": "AUTO",
+          "min_signal": 0.95
+        },
+        {
+          "action": "DEFER",
+          "min_signal": 0.5
+        },
+        {
+          "action": "HUMAN",
+          "min_signal": 0.0
+        }
+      ]
+    },
+    {
+      "question": "escalate",
+      "signal": "probability",
+      "tiers": [
+        {
+          "action": "ALERT",
+          "min_signal": 0.95
+        },
+        {
+          "action": "DEFER",
+          "min_signal": 0.6
+        },
+        {
+          "action": "NORMAL",
+          "min_signal": 0.0
+        }
+      ]
+    }
+  ]
+}
