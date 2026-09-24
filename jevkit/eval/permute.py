@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """排列稳定性评测：打乱选项顺序，答案和概率稳不稳？
 
 笔记 2.3 的证据：反转选项顺序能把概率从 0.84–0.89 推到 0.93–0.96；
@@ -20,16 +19,22 @@ from __future__ import annotations
 
 import math
 import random
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field, replace
-from typing import Any, Mapping, Sequence
+from typing import Any
 
-from ..policy.policy import Policy, decide
 from ..core.types import (
-    Answers, BackendError, Choice, ChoiceAnswer, Noul, Question, Score,
+    Answers,
+    BackendError,
+    Choice,
+    ChoiceAnswer,
+    Noul,
+    Question,
+    Score,
 )
+from ..policy.policy import Policy, decide
 
-__all__ = ["PermuteResult", "permute_state", "permute_report",
-           "shuffled_choice_questions"]
+__all__ = ["PermuteResult", "permute_state", "permute_report", "shuffled_choice_questions"]
 
 
 @dataclass
@@ -37,29 +42,36 @@ class PermuteResult:
     question: str
     qtype: str
     n_perms: int = 0
-    drift_max: float = float("nan")        # max |p_k − p'_k|（逐选项、逐次排列）
-    kl_mean: float = float("nan")          # mean KL(p ‖ p')
-    argmax_flip_rate: float = float("nan") # 选中项随顺序改变的比例
-    action_flip_rate: float = float("nan") # 政策动作随顺序改变的比例（核心指标）
+    drift_max: float = float("nan")  # max |p_k − p'_k|（逐选项、逐次排列）
+    kl_mean: float = float("nan")  # mean KL(p ‖ p')
+    argmax_flip_rate: float = float("nan")  # 选中项随顺序改变的比例
+    action_flip_rate: float = float("nan")  # 政策动作随顺序改变的比例（核心指标）
     picks: dict[str, int] = field(default_factory=dict)
     verdict: str = ""
-    mode: str = "client"                   # client（客户端打乱）| native（kev 原生端点）
+    mode: str = "client"  # client（客户端打乱）| native（kev 原生端点）
 
     def to_json(self) -> dict[str, Any]:
         return {
-            "question": self.question, "qtype": self.qtype, "n_perms": self.n_perms,
+            "question": self.question,
+            "qtype": self.qtype,
+            "n_perms": self.n_perms,
             "drift_max": None if math.isnan(self.drift_max) else round(self.drift_max, 4),
             "kl_mean": None if math.isnan(self.kl_mean) else round(self.kl_mean, 4),
-            "argmax_flip_rate": None if math.isnan(self.argmax_flip_rate)
-                                else round(self.argmax_flip_rate, 4),
-            "action_flip_rate": None if math.isnan(self.action_flip_rate)
-                                else round(self.action_flip_rate, 4),
-            "picks": self.picks, "verdict": self.verdict, "mode": self.mode,
+            "argmax_flip_rate": None
+            if math.isnan(self.argmax_flip_rate)
+            else round(self.argmax_flip_rate, 4),
+            "action_flip_rate": None
+            if math.isnan(self.action_flip_rate)
+            else round(self.action_flip_rate, 4),
+            "picks": self.picks,
+            "verdict": self.verdict,
+            "mode": self.mode,
         }
 
 
-def shuffled_choice_questions(questions: Mapping[str, Question],
-                              rng: random.Random) -> dict[str, Question]:
+def shuffled_choice_questions(
+    questions: Mapping[str, Question], rng: random.Random
+) -> dict[str, Question]:
     """返回一份只重排了 choice 候选顺序的新题集（score/noul 原样保留）。"""
     out: dict[str, Question] = {}
     for key, q in questions.items():
@@ -82,22 +94,27 @@ def _with_choice_run(base: Answers, key: str, run: Mapping[str, Any]) -> Answers
     answers = dict(base.answers)
     answers[key] = ChoiceAnswer(chosen, conf, probs)
     raw = dict(base.raw)
-    raw[key] = {"type": "choice", "choice": chosen, "confidence": conf,
-                "probabilities": probs}
+    raw[key] = {"type": "choice", "choice": chosen, "confidence": conf, "probabilities": probs}
     return replace(base, answers=answers, raw=raw)
 
 
-def permute_state(backend, state: Any, questions: Mapping[str, Question], *,
-                  policy: Policy | None = None, n_perm: int = 6,
-                  model: str = "", seed: int = 1,
-                  state_ref: str = "") -> dict[str, PermuteResult]:
+def permute_state(
+    backend,
+    state: Any,
+    questions: Mapping[str, Question],
+    *,
+    policy: Policy | None = None,
+    n_perm: int = 6,
+    model: str = "",
+    seed: int = 1,
+    state_ref: str = "",
+) -> dict[str, PermuteResult]:
     """对一个 state 做 n_perm 次不同顺序的询问，产出每题的稳定性结果。
 
     后端若提供原生排列（kev 的 POST /v1/systemone/permute，见 HttpBackend.permute）
     则走服务端；否则客户端打乱题集逐次重问。两条路径产出同构的结果。
     """
-    choice_keys = [k for k, q in questions.items()
-                   if isinstance(q, Choice) and len(q.criteria) > 1]
+    choice_keys = [k for k, q in questions.items() if isinstance(q, Choice) and len(q.criteria) > 1]
     if not choice_keys:
         raise BackendError("没有可排列的 choice 题（score/noul 不适用排列测试）")
 
@@ -110,8 +127,9 @@ def permute_state(backend, state: Any, questions: Mapping[str, Question], *,
     if getattr(backend, "native_permute", False):
         for key in choice_keys:
             try:
-                runs = backend.permute(state, questions, question=key,
-                                       n_perm=n_perm, seed=seed, model=model)
+                runs = backend.permute(
+                    state, questions, question=key, n_perm=n_perm, seed=seed, model=model
+                )
             except (BackendError, AttributeError):
                 runs = None  # 官方端点没有这个路由（404 会以 BackendError 冒出）
             if runs:
@@ -128,8 +146,10 @@ def permute_state(backend, state: Any, questions: Mapping[str, Question], *,
         while len(perms) < n_perm and attempts < n_perm * 4:
             attempts += 1
             cand = shuffled_choice_questions(questions, rng)
-            sig = [list(cand[k].criteria.keys()) if isinstance(cand[k], Choice) else []
-                   for k in sorted(cand)]
+            sig = [
+                list(cand[k].criteria.keys()) if isinstance(cand[k], Choice) else []
+                for k in sorted(cand)
+            ]
             if sig in seen_orders:
                 continue
             seen_orders.append(sig)
@@ -142,9 +162,12 @@ def permute_state(backend, state: Any, questions: Mapping[str, Question], *,
     for key, q in questions.items():
         if not (isinstance(q, Choice) and len(q.criteria) > 1):
             results[key] = PermuteResult(
-                question=key, qtype=q.type,
+                question=key,
+                qtype=q.type,
                 verdict="skipped（score 档序是语义、noul 无候选）"
-                if isinstance(q, (Score, Noul)) else "skipped")
+                if isinstance(q, (Score, Noul))
+                else "skipped",
+            )
             continue
 
         runs = per_question.get(key, perm_answers)
@@ -154,10 +177,14 @@ def permute_state(backend, state: Any, questions: Mapping[str, Question], *,
         for pa in runs:
             a = pa.answers[key]
             for opt in b.probabilities:
-                drift_max = max(drift_max,
-                                abs(b.probabilities[opt] - a.probabilities.get(opt, 0.0)))
-            kl = sum(p * math.log(p / max(a.probabilities.get(k, 1e-9), 1e-9))
-                     for k, p in b.probabilities.items() if p > 0)
+                drift_max = max(
+                    drift_max, abs(b.probabilities[opt] - a.probabilities.get(opt, 0.0))
+                )
+            kl = sum(
+                p * math.log(p / max(a.probabilities.get(k, 1e-9), 1e-9))
+                for k, p in b.probabilities.items()
+                if p > 0
+            )
             kl_sum += kl
             if a.choice != b.choice:
                 flips += 1
@@ -165,27 +192,43 @@ def permute_state(backend, state: Any, questions: Mapping[str, Question], *,
 
         action_flips = float("nan")
         if policy is not None:
-            base_action = decide(base, policy, state_ref=state_ref or "permute-base",
-                                 state=state, question_set=questions,
-                                 question_set_version="permute").actions[key]["action"]
+            base_action = decide(
+                base,
+                policy,
+                state_ref=state_ref or "permute-base",
+                state=state,
+                question_set=questions,
+                question_set_version="permute",
+            ).actions[key]["action"]
             changed = 0
             for pa in runs:
-                rec = decide(pa, policy, state_ref=state_ref or "permute-perm",
-                             state=state, question_set=questions,
-                             question_set_version="permute")
+                rec = decide(
+                    pa,
+                    policy,
+                    state_ref=state_ref or "permute-perm",
+                    state=state,
+                    question_set=questions,
+                    question_set_version="permute",
+                )
                 if rec.actions[key]["action"] != base_action:
                     changed += 1
             action_flips = changed / max(len(runs), 1)
 
         r = PermuteResult(
-            question=key, qtype="choice", n_perms=len(runs),
-            drift_max=drift_max, kl_mean=kl_sum / max(len(runs), 1),
+            question=key,
+            qtype="choice",
+            n_perms=len(runs),
+            drift_max=drift_max,
+            kl_mean=kl_sum / max(len(runs), 1),
             argmax_flip_rate=flips / max(len(runs), 1),
-            action_flip_rate=action_flips, picks=picks, mode=modes.get(key, "client"),
+            action_flip_rate=action_flips,
+            picks=picks,
+            mode=modes.get(key, "client"),
         )
         if not math.isnan(action_flips) and action_flips > 0:
-            r.verdict = ("⚠️ 动作随顺序翻转 %.0f%%——阈值卡在漂移带内，"
-                         "该题不适合此政策下的全自动" % (action_flips * 100))
+            r.verdict = "⚠️ 动作随顺序翻转 %.0f%%——阈值卡在漂移带内，该题不适合此政策下的全自动" % (
+                action_flips * 100
+            )
         elif flips > 0:
             r.verdict = "⚠️ argmax 随顺序改变，但未跨过政策阈值（留意余量）"
         else:
@@ -194,14 +237,32 @@ def permute_state(backend, state: Any, questions: Mapping[str, Question], *,
     return results
 
 
-def permute_report(examples: Sequence, backend, *,
-                   policy: Policy | None = None, n_perm: int = 6,
-                   model: str = "", seed: int = 1) -> list[tuple[str, dict[str, PermuteResult]]]:
+def permute_report(
+    examples: Sequence,
+    backend,
+    *,
+    policy: Policy | None = None,
+    n_perm: int = 6,
+    model: str = "",
+    seed: int = 1,
+) -> list[tuple[str, dict[str, PermuteResult]]]:
     """对一批数据行逐行排列测试。返回 [(state_ref, {题目: 结果}), ...]。"""
     out = []
     for i, ex in enumerate(examples):
         ref = ex.state_ref or "row-%d" % (i + 1)
-        out.append((ref, permute_state(backend, ex.state, ex.questions,
-                                       policy=policy, n_perm=n_perm,
-                                       model=model, seed=seed, state_ref=ref)))
+        out.append(
+            (
+                ref,
+                permute_state(
+                    backend,
+                    ex.state,
+                    ex.questions,
+                    policy=policy,
+                    n_perm=n_perm,
+                    model=model,
+                    seed=seed,
+                    state_ref=ref,
+                ),
+            )
+        )
     return out

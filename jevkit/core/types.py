@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """三原语与类型化答案。
 
 Jev / System One 的全部接口面：一份 state + 若干原子题（choice / score / noul），
@@ -17,23 +16,36 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import Any, Mapping, Union
+from typing import Any
 
 __all__ = [
-    "JSONContent", "Choice", "Score", "Noul", "Question",
-    "ChoiceAnswer", "ScoreAnswer", "NoulAnswer", "Answers", "state_digest",
+    "JSONContent",
+    "Choice",
+    "Score",
+    "Noul",
+    "Question",
+    "ChoiceAnswer",
+    "ScoreAnswer",
+    "NoulAnswer",
+    "Answers",
+    "state_digest",
 ]
 
 from ..errors import (  # noqa: E402,F401  再导出以兼容模块内引用
-    BackendError, JevkitError, PolicyError, ValidationError,
+    BackendError,
+    JevkitError,
+    PolicyError,
+    ValidationError,
 )
 
 # 与 kev.api.JSONContent 对齐：请求里的自由文本字段都允许任意 JSON 内容
-JSONContent = Union[str, dict, list, int, float, bool, None]
+JSONContent = str | dict | list | int | float | bool | None
 
 
 # ---------------------------------------------------------------- 请求侧：三种题
+
 
 @dataclass(frozen=True)
 class Choice:
@@ -45,8 +57,7 @@ class Choice:
     def __post_init__(self) -> None:
         criteria = dict(self.criteria)
         if not 1 <= len(criteria) <= 255:
-            raise ValidationError(
-                "choice 题候选数必须在 1–255 之间，当前 %d" % len(criteria))
+            raise ValidationError("choice 题候选数必须在 1–255 之间，当前 %d" % len(criteria))
         object.__setattr__(self, "criteria", criteria)
 
     @property
@@ -54,10 +65,13 @@ class Choice:
         return "choice"
 
     def to_request(self) -> dict:
-        return {"type": "choice", "instructions": self.instructions,
-                "criteria": dict(self.criteria)}
+        return {
+            "type": "choice",
+            "instructions": self.instructions,
+            "criteria": dict(self.criteria),
+        }
 
-    def shuffled(self, order: list[str]) -> "Choice":
+    def shuffled(self, order: list[str]) -> Choice:
         """按给定顺序重排候选（排列测试用）。order 必须是候选的一个排列。"""
         if sorted(order) != sorted(self.criteria):
             raise ValidationError("order 不是 criteria 的排列")
@@ -75,15 +89,15 @@ class Score:
         if not 1 <= len(self.criteria) <= 255:
             raise ValidationError(
                 "score 题档数必须在 1–255 之间，当前 %d（TypeSafe 托管端点建议 2–10 档）"
-                % len(self.criteria))
+                % len(self.criteria)
+            )
 
     @property
     def type(self) -> str:
         return "score"
 
     def to_request(self) -> dict:
-        return {"type": "score", "instructions": self.instructions,
-                "criteria": list(self.criteria)}
+        return {"type": "score", "instructions": self.instructions, "criteria": list(self.criteria)}
 
     def legend(self) -> dict[int, Any]:
         return {i: text for i, text in enumerate(self.criteria)}
@@ -94,7 +108,7 @@ class Noul:
     """判断是否成立。只返回 0~1 概率——概率本身就是置信度，没有独立 confidence。"""
 
     instructions: JSONContent
-    criteria: Union[Mapping[str, JSONContent], None] = None  # 可选：{"true": …, "false": …}
+    criteria: Mapping[str, JSONContent] | None = None  # 可选：{"true": …, "false": …}
 
     @property
     def type(self) -> str:
@@ -107,7 +121,7 @@ class Noul:
         return req
 
 
-Question = Union[Choice, Score, Noul]
+Question = Choice | Score | Noul
 
 
 def question_from_request(payload: Mapping[str, Any]) -> Question:
@@ -123,6 +137,7 @@ def question_from_request(payload: Mapping[str, Any]) -> Question:
 
 
 # ---------------------------------------------------------------- 响应侧：三种答案
+
 
 @dataclass(frozen=True)
 class ChoiceAnswer:
@@ -141,7 +156,7 @@ class ChoiceAnswer:
 
 @dataclass(frozen=True)
 class ScoreAnswer:
-    score: float            # 期望档位 Σ i·p_i
+    score: float  # 期望档位 Σ i·p_i
     confidence: float
     legend: dict[int, str]
     probabilities: dict[int, float]
@@ -164,7 +179,7 @@ class NoulAnswer:
         return "noul"
 
 
-AnyAnswer = Union[ChoiceAnswer, ScoreAnswer, NoulAnswer]
+AnyAnswer = ChoiceAnswer | ScoreAnswer | NoulAnswer
 
 
 def _parse_choice_answer(a: Mapping[str, Any]) -> ChoiceAnswer:
@@ -175,7 +190,7 @@ def _parse_choice_answer(a: Mapping[str, Any]) -> ChoiceAnswer:
             probabilities={str(k): float(v) for k, v in a["probabilities"].items()},
         )
     except (KeyError, TypeError, ValueError) as e:
-        raise ValidationError("choice 答案结构不合法：%r（%s）" % (dict(a), e))
+        raise ValidationError("choice 答案结构不合法：%r（%s）" % (dict(a), e)) from e
 
 
 def _parse_score_answer(a: Mapping[str, Any]) -> ScoreAnswer:
@@ -187,7 +202,7 @@ def _parse_score_answer(a: Mapping[str, Any]) -> ScoreAnswer:
             probabilities={int(k): float(v) for k, v in a["probabilities"].items()},
         )
     except (KeyError, TypeError, ValueError) as e:
-        raise ValidationError("score 答案结构不合法：%r（%s）" % (dict(a), e))
+        raise ValidationError("score 答案结构不合法：%r（%s）" % (dict(a), e)) from e
 
 
 def parse_answer(a: Mapping[str, Any]) -> AnyAnswer:
@@ -225,14 +240,13 @@ class Answers:
     model: str
     answers: dict[str, AnyAnswer]
     raw: dict[str, Any] = field(default_factory=dict)
-    request_id: Union[str, None] = None
-    input_tokens: Union[int, None] = None
-    output_tokens: Union[int, None] = None
-    latency_ms: Union[float, None] = None
+    request_id: str | None = None
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+    latency_ms: float | None = None
 
     @staticmethod
-    def from_response(payload: Mapping[str, Any],
-                      latency_ms: Union[float, None] = None) -> "Answers":
+    def from_response(payload: Mapping[str, Any], latency_ms: float | None = None) -> Answers:
         if not isinstance(payload, Mapping) or "answers" not in payload:
             raise ValidationError("响应缺少 answers 字段：%r" % (payload,))
         answers = {k: parse_answer(v) for k, v in payload["answers"].items()}
@@ -251,8 +265,9 @@ class Answers:
         try:
             return self.answers[question]
         except KeyError:
-            raise PolicyError("答案里没有题目 %r；现有题目：%s"
-                              % (question, sorted(self.answers))) from None
+            raise PolicyError(
+                "答案里没有题目 %r；现有题目：%s" % (question, sorted(self.answers))
+            ) from None
 
 
 def state_digest(state: Any) -> str:

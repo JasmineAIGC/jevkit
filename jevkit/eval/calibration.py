@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """温度缩放校准。
 
 过度自信是常态（合成器复现的那种"报 0.9 实际 0.73"）。温度缩放：
@@ -17,12 +16,19 @@
 from __future__ import annotations
 
 import math
-from typing import NamedTuple, Sequence
+from collections.abc import Sequence
+from typing import NamedTuple
 
 from .metrics import Pair, accuracy, brier, ece, logloss
 
-__all__ = ["to_logit", "to_prob", "fit_temperature", "apply_temperature",
-           "CalibrationReport", "calibrate_report"]
+__all__ = [
+    "to_logit",
+    "to_prob",
+    "fit_temperature",
+    "apply_temperature",
+    "CalibrationReport",
+    "calibrate_report",
+]
 
 
 def to_logit(p: float) -> float:
@@ -34,8 +40,9 @@ def to_prob(z: float) -> float:
     return 1.0 / (1.0 + math.exp(-z))
 
 
-def fit_temperature(pairs: Sequence[Pair], lo: float = 0.5, hi: float = 6.0,
-                    step: float = 0.01) -> tuple[float, float]:
+def fit_temperature(
+    pairs: Sequence[Pair], lo: float = 0.5, hi: float = 6.0, step: float = 0.01
+) -> tuple[float, float]:
     """网格搜索 T ∈ [lo, hi] 最小化 held-out NLL。返回 (T, 最优 NLL)。"""
     zs = [(to_logit(p), y) for p, y in pairs]
     best_t, best_loss = 1.0, float("inf")
@@ -57,14 +64,16 @@ class CalibrationReport(NamedTuple):
     n_fit: int
     n_test: int
     temperature: float
-    kind: str                   # binary（noul：p 即正类概率）| confidence（choice/score：p 是置信度，y 是对错）
-    before: dict[str, float]      # test 集 T=1：accuracy/ece/brier/logloss
-    after: dict[str, float]        # test 集 T=拟合值
+    kind: str  # binary（noul：p 即正类概率）
+    # confidence（choice/score：p 是置信度，y 是对错）
+    before: dict[str, float]  # test 集 T=1：accuracy/ece/brier/logloss
+    after: dict[str, float]  # test 集 T=拟合值
     reliability_after: list[tuple]  # 分箱明细
 
 
-def calibrate_report(pairs: Sequence[Pair], *, fit_fraction: float = 0.5,
-                     kind: str = "binary") -> CalibrationReport:
+def calibrate_report(
+    pairs: Sequence[Pair], *, fit_fraction: float = 0.5, kind: str = "binary"
+) -> CalibrationReport:
     """对半分割：一半拟合温度，另一半出检验指标。样本 < 20 直接抛错（结果无意义）。
 
     kind 决定"准确率"口径：
@@ -84,14 +93,15 @@ def calibrate_report(pairs: Sequence[Pair], *, fit_fraction: float = 0.5,
             acc = sum(1 for _, y in ps if y) / len(ps)
         else:
             acc = accuracy(ps)
-        return {"accuracy": acc, "ece": ece(ps)[0],
-                "brier": brier(ps), "logloss": logloss(ps)}
+        return {"accuracy": acc, "ece": ece(ps)[0], "brier": brier(ps), "logloss": logloss(ps)}
 
-    rows = [(r.lo, r.hi, r.n, r.mean_conf, r.accuracy)
-            for r in ece(after)[1]]
+    rows = [(r.lo, r.hi, r.n, r.mean_conf, r.accuracy) for r in ece(after)[1]]
     return CalibrationReport(
-        n=len(pairs), n_fit=len(fit_set), n_test=len(test_set),
-        temperature=t, kind=kind,
+        n=len(pairs),
+        n_fit=len(fit_set),
+        n_test=len(test_set),
+        temperature=t,
+        kind=kind,
         before=metrics(test_set),
         after=metrics(after),
         reliability_after=rows,

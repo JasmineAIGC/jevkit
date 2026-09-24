@@ -1,12 +1,11 @@
-# -*- coding: utf-8 -*-
 """CLI 端到端：六个子命令在临时目录里跑通。"""
 
 import json
 
 import pytest
+from conftest import TRIAGE_QUESTIONS, triage_policy
 
 from jevkit import cli
-from conftest import TRIAGE_QUESTIONS, triage_policy
 
 
 @pytest.fixture(autouse=True)
@@ -18,17 +17,22 @@ def _cwd(tmp_path, monkeypatch):
 def _write_states(path, n=8):
     with open(path, "w", encoding="utf-8") as f:
         for i in range(n):
-            f.write(json.dumps({
-                "state": "ticket number %d about a late delivery and a refund"
-                         % i,
-                "state_ref": "row-%d" % i,
-                "questions": {k: q.to_request()
-                              for k, q in TRIAGE_QUESTIONS.items()},
-            }, ensure_ascii=False) + "\n")
+            f.write(
+                json.dumps(
+                    {
+                        "state": "ticket number %d about a late delivery and a refund" % i,
+                        "state_ref": "row-%d" % i,
+                        "questions": {k: q.to_request() for k, q in TRIAGE_QUESTIONS.items()},
+                    },
+                    ensure_ascii=False,
+                )
+                + "\n"
+            )
 
 
 def _write_labeled(path, n=60):
     from jevkit import MockBackend
+
     backend = MockBackend()
     with open(path, "w", encoding="utf-8") as f:
         for i in range(n):
@@ -36,7 +40,8 @@ def _write_labeled(path, n=60):
             answers = backend.ask(state, TRIAGE_QUESTIONS)
             dep = answers.answers["department"]
             row = {
-                "state": state, "state_ref": "lab-%d" % i,
+                "state": state,
+                "state_ref": "lab-%d" % i,
                 "questions": {k: q.to_request() for k, q in TRIAGE_QUESTIONS.items()},
                 "answers": answers.raw,
                 "labels": {
@@ -88,9 +93,22 @@ class TestPermute:
         _write_states("states.jsonl")
         with open("p.json", "w", encoding="utf-8") as f:
             json.dump(triage_policy().to_json(), f)
-        assert cli.main(["permute", "--data", "states.jsonl",
-                         "--policy", "p.json", "--backend", "mock",
-                         "--n-perm", "4"]) == 0
+        assert (
+            cli.main(
+                [
+                    "permute",
+                    "--data",
+                    "states.jsonl",
+                    "--policy",
+                    "p.json",
+                    "--backend",
+                    "mock",
+                    "--n-perm",
+                    "4",
+                ]
+            )
+            == 0
+        )
         out = capsys.readouterr().out
         assert "department" in out and "漂移" in out
 
@@ -100,15 +118,27 @@ class TestCompileCheck:
         _write_labeled("lab.jsonl", n=120)
         with open("tpl.json", "w", encoding="utf-8") as f:
             json.dump(triage_policy().to_json(), f)
-        assert cli.main(["compile", "--data", "lab.jsonl",
-                         "--template", "tpl.json", "--budget", "0.3",
-                         "--out", "policy.lock.json"]) == 0
+        assert (
+            cli.main(
+                [
+                    "compile",
+                    "--data",
+                    "lab.jsonl",
+                    "--template",
+                    "tpl.json",
+                    "--budget",
+                    "0.3",
+                    "--out",
+                    "policy.lock.json",
+                ]
+            )
+            == 0
+        )
         lock = json.load(open("policy.lock.json", encoding="utf-8"))
         assert lock["policy"]["version"].endswith("@budget0.30")
         assert lock["evidence"]["data_sha256"]
 
-        assert cli.main(["check", "--data", "lab.jsonl",
-                         "--lock", "policy.lock.json"]) == 0
+        assert cli.main(["check", "--data", "lab.jsonl", "--lock", "policy.lock.json"]) == 0
         out = capsys.readouterr().out
         assert "无漂移" in out
 
@@ -116,19 +146,30 @@ class TestCompileCheck:
         _write_labeled("lab.jsonl", n=120)
         with open("tpl.json", "w", encoding="utf-8") as f:
             json.dump(triage_policy().to_json(), f)
-        cli.main(["compile", "--data", "lab.jsonl", "--template", "tpl.json",
-                  "--budget", "0.3", "--out", "policy.lock.json"])
+        cli.main(
+            [
+                "compile",
+                "--data",
+                "lab.jsonl",
+                "--template",
+                "tpl.json",
+                "--budget",
+                "0.3",
+                "--out",
+                "policy.lock.json",
+            ]
+        )
         capsys.readouterr()
         # 破坏分布：标签全部翻转
-        rows = [json.loads(l) for l in open("lab.jsonl", encoding="utf-8")]
+        rows = [json.loads(line) for line in open("lab.jsonl", encoding="utf-8")]
         for r in rows:
-            r["labels"]["department"] = "returns" \
-                if r["labels"]["department"] != "returns" else "billing"
+            r["labels"]["department"] = (
+                "returns" if r["labels"]["department"] != "returns" else "billing"
+            )
         with open("lab.jsonl", "w", encoding="utf-8") as f:
             for r in rows:
                 f.write(json.dumps(r, ensure_ascii=False) + "\n")
-        assert cli.main(["check", "--data", "lab.jsonl",
-                         "--lock", "policy.lock.json"]) == 1
+        assert cli.main(["check", "--data", "lab.jsonl", "--lock", "policy.lock.json"]) == 1
         out = capsys.readouterr().out
         assert "漂移" in out
 

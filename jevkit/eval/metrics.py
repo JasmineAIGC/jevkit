@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """评测度量：ECE / Brier / log loss / 覆盖率—准确率 / 错误预算选阈值。
 
 全部泛化到三种题型：调用方先用 pairs_from_examples() 把带标签数据按题型
@@ -12,14 +11,23 @@
 from __future__ import annotations
 
 import math
-from typing import Iterable, NamedTuple, Sequence
+from collections.abc import Iterable, Sequence
+from typing import NamedTuple
 
 from ..core.types import Answers, ChoiceAnswer, NoulAnswer, ScoreAnswer
 
 __all__ = [
-    "ece", "brier", "logloss", "accuracy", "ReliabilityRow",
-    "reliability_table", "coverage_table", "best_threshold",
-    "pairs_from_examples", "score_mae", "choice_logloss_mc",
+    "ece",
+    "brier",
+    "logloss",
+    "accuracy",
+    "ReliabilityRow",
+    "reliability_table",
+    "coverage_table",
+    "best_threshold",
+    "pairs_from_examples",
+    "score_mae",
+    "choice_logloss_mc",
 ]
 
 Pair = tuple[float, bool]
@@ -27,7 +35,8 @@ Pair = tuple[float, bool]
 
 # ---------------------------------------------------------------- 二值视角度量
 
-def ece(pairs: Sequence[Pair], bins: int = 10) -> tuple[float, list["ReliabilityRow"]]:
+
+def ece(pairs: Sequence[Pair], bins: int = 10) -> tuple[float, list[ReliabilityRow]]:
     """期望校准误差：按置信度分箱，加权 |准确率 − 平均置信|。"""
     buckets: list[list[Pair]] = [[] for _ in range(bins)]
     for p, y in pairs:
@@ -42,8 +51,9 @@ def ece(pairs: Sequence[Pair], bins: int = 10) -> tuple[float, list["Reliability
         conf = sum(p for p, _ in b) / len(b)
         acc = sum(1 for _, y in b if y) / len(b)
         total += len(b) / n * abs(acc - conf)
-        rows.append(ReliabilityRow(lo=i / bins, hi=(i + 1) / bins, n=len(b),
-                                   mean_conf=conf, accuracy=acc))
+        rows.append(
+            ReliabilityRow(lo=i / bins, hi=(i + 1) / bins, n=len(b), mean_conf=conf, accuracy=acc)
+        )
     return total, rows
 
 
@@ -83,9 +93,11 @@ def reliability_table(pairs: Sequence[Pair], bins: int = 10) -> list[Reliability
 
 # ---------------------------------------------------------------- 覆盖率—准确率
 
-def coverage_table(pairs: Sequence[Pair],
-                   thresholds: Sequence[float] = (0.95, 0.9, 0.85, 0.8, 0.7, 0.6, 0.5, 0.0),
-                   ) -> list[tuple[float, float, float]]:
+
+def coverage_table(
+    pairs: Sequence[Pair],
+    thresholds: Sequence[float] = (0.95, 0.9, 0.85, 0.8, 0.7, 0.6, 0.5, 0.0),
+) -> list[tuple[float, float, float]]:
     """按置信度从高到低累计：[(阈值, 覆盖率, 准确率), ...]。"""
     n = len(pairs)
     if n == 0:
@@ -100,8 +112,9 @@ def coverage_table(pairs: Sequence[Pair],
     return out
 
 
-def best_threshold(pairs: Sequence[Pair], budget: float = 0.05,
-                   min_coverage: float = 0.05) -> tuple[float, float, float]:
+def best_threshold(
+    pairs: Sequence[Pair], budget: float = 0.05, min_coverage: float = 0.05
+) -> tuple[float, float, float]:
     """错误预算下选阈值：τ* = argmax coverage s.t. error(τ) ≤ budget。
 
     返回 (τ*, coverage, accuracy)。找不到满足预算的阈值时返回 (1.0, 0.0, nan)——
@@ -124,8 +137,8 @@ def best_threshold(pairs: Sequence[Pair], budget: float = 0.05,
 
 # ---------------------------------------------------------------- 从数据到度量对
 
-def pairs_from_examples(examples: Iterable[tuple[Answers, object]],
-                        question: str) -> list[Pair]:
+
+def pairs_from_examples(examples: Iterable[tuple[Answers, object]], question: str) -> list[Pair]:
     """把 (Answers, labels) 序列折算成二值校准对。
 
     - noul   → (noul 概率, 标签为真)
@@ -161,8 +174,9 @@ def score_mae(examples: Iterable[tuple[Answers, object]], question: str) -> floa
     return sum(errs) / max(len(errs), 1)
 
 
-def choice_logloss_mc(examples: Iterable[tuple[Answers, object]],
-                      question: str, eps: float = 1e-12) -> float:
+def choice_logloss_mc(
+    examples: Iterable[tuple[Answers, object]], question: str, eps: float = 1e-12
+) -> float:
     """choice 题专用：多类 NLL = mean(−log p_label)，衡量整个分布的质量。"""
     vals = []
     for answers, labels in examples:

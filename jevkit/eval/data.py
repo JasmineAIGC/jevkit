@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """标注数据 IO —— 采纳 kev train JSONL 格式。
 
 每行 = 一次完整请求（state + questions）+ 每题 label（可选内嵌 answers）：
@@ -24,13 +23,20 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Iterator, Mapping
 from dataclasses import dataclass, field
-from typing import Any, Iterator, Mapping, Union
+from typing import Any
 
 from ..core.types import Answers, Question, ValidationError, question_from_request
 
-__all__ = ["LabeledExample", "read_examples", "iter_examples", "sha256_file",
-           "with_predictions", "split_half"]
+__all__ = [
+    "LabeledExample",
+    "read_examples",
+    "iter_examples",
+    "sha256_file",
+    "with_predictions",
+    "split_half",
+]
 
 
 @dataclass
@@ -38,14 +44,8 @@ class LabeledExample:
     state: Any
     questions: dict[str, Question]
     labels: dict[str, Any] = field(default_factory=dict)
-    answers: Union[Answers, None] = None       # 内嵌预测（可选）
-    state_ref: str = ""                        # 行内可选 "state_ref" 字段
-
-    @property
-    def labeled_pairs(self) -> Iterator[tuple[Answers, dict[str, Any]]]:
-        """给 metrics.pairs_from_examples 直接消费的形状。"""
-        if self.answers is not None:
-            yield self.answers, self.labels
+    answers: Answers | None = None  # 内嵌预测（可选）
+    state_ref: str = ""  # 行内可选 "state_ref" 字段
 
 
 def _extract_labels(row: Mapping[str, Any], questions: dict[str, Question]) -> dict[str, Any]:
@@ -62,17 +62,17 @@ def _extract_labels(row: Mapping[str, Any], questions: dict[str, Question]) -> d
 
 def parse_row(row: Mapping[str, Any]) -> LabeledExample:
     if "state" not in row or "questions" not in row:
-        raise ValidationError(
-            "数据行必须包含 state 与 questions 字段：%r" % (sorted(row.keys()),))
-    questions = {k: question_from_request(v)
-                 for k, v in row["questions"].items()}
+        raise ValidationError("数据行必须包含 state 与 questions 字段：%r" % (sorted(row.keys()),))
+    questions = {k: question_from_request(v) for k, v in row["questions"].items()}
     ex = LabeledExample(
         state=row["state"],
         questions=questions,
         labels=_extract_labels(row, questions),
         answers=Answers.from_response(
-            {"model": row.get("model", "recorded"),
-             "answers": row["answers"]}) if row.get("answers") else None,
+            {"model": row.get("model", "recorded"), "answers": row["answers"]}
+        )
+        if row.get("answers")
+        else None,
         state_ref=str(row.get("state_ref", "")),
     )
     return ex
@@ -103,8 +103,9 @@ def sha256_file(path: str) -> str:
     return h.hexdigest()[:16]
 
 
-def with_predictions(examples: list[LabeledExample], backend, *,
-                     model: str = "") -> list[LabeledExample]:
+def with_predictions(
+    examples: list[LabeledExample], backend, *, model: str = ""
+) -> list[LabeledExample]:
     """对缺 answers 的行现场取预测（返回新列表，原行不动）。"""
     out = []
     for ex in examples:

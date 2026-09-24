@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "jevkit"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Jev / Kev (System One) 政策层 + 评测层统一框架：概率进，带证据的动作出"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -21,21 +21,41 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Typing :: Typed",
 ]
 dependencies = []
 
 [project.optional-dependencies]
 typesafe = ["typesafe-sdk>=0.7"]
-dev = ["pytest>=8"]
+dev = ["pytest>=8", "ruff>=0.8"]
 
 [project.scripts]
 jevkit = "jevkit.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/JasmineAIGC/jevkit"
+Issues = "https://github.com/JasmineAIGC/jevkit/issues"
+Changelog = "https://github.com/JasmineAIGC/jevkit/blob/main/CHANGELOG.md"
+
+[tool.hatch.version]
+path = "jevkit/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["jevkit"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-exclude = ["examples/data"]
+
+[tool.ruff.lint]
+select = ["F", "E", "W", "I", "UP", "B"]
+ignore = [
+    "UP031",  # printf 风格是有意保留：CLI 双语输出的位置化模板，全文一致
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["jevkit"]

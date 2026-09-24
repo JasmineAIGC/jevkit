@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """生成示例数据（在项目根目录运行：python examples/make_example_data.py）。
 
 产出三个文件，演示完整闭环的每一段：
@@ -22,14 +21,16 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from jevkit import Choice, Noul, Score, make_backend  # noqa: E402
 
 QUESTIONS = {
-    "department": Choice("Which team should handle this ticket?", {
-        "returns": "Exchanges, refunds, wrong or damaged items",
-        "shipping": "Delivery status, delays, lost packages",
-        "billing": "Charges, invoices, payment problems",
-    }),
+    "department": Choice(
+        "Which team should handle this ticket?",
+        {
+            "returns": "Exchanges, refunds, wrong or damaged items",
+            "shipping": "Delivery status, delays, lost packages",
+            "billing": "Charges, invoices, payment problems",
+        },
+    ),
     "escalate": Noul("Does this need urgent human attention?"),
-    "frustration": Score("How frustrated is the customer?",
-                         ["Calm", "Frustrated", "Very angry"]),
+    "frustration": Score("How frustrated is the customer?", ["Calm", "Frustrated", "Very angry"]),
 }
 
 TEMPLATES = [
@@ -39,12 +40,24 @@ TEMPLATES = [
     "Checking on order #{n}. {issue_cap} Can someone {want}?",
 ]
 ISSUES = {
-    "returns": ["damaged on arrival", "the wrong size", "a different color than ordered",
-                "broken packaging and missing parts"],
-    "shipping": ["not delivered yet", "stuck in transit for two weeks",
-                 "marked delivered but never arrived", "no tracking updates for days"],
-    "billing": ["charged twice on my card", "an extra fee I never approved",
-                "charged the wrong amount", "still billed after cancellation"],
+    "returns": [
+        "damaged on arrival",
+        "the wrong size",
+        "a different color than ordered",
+        "broken packaging and missing parts",
+    ],
+    "shipping": [
+        "not delivered yet",
+        "stuck in transit for two weeks",
+        "marked delivered but never arrived",
+        "no tracking updates for days",
+    ],
+    "billing": [
+        "charged twice on my card",
+        "an extra fee I never approved",
+        "charged the wrong amount",
+        "still billed after cancellation",
+    ],
 }
 WANTS = {
     "returns": ["exchange it", "return it for a refund", "get a replacement"],
@@ -55,14 +68,24 @@ WANTS = {
 POLICY_TEMPLATE = {
     "version": "triage-v1",
     "gates": [
-        {"question": "department", "signal": "confidence",
-         "tiers": [{"action": "AUTO", "min_signal": 0.95},
-                   {"action": "DEFER", "min_signal": 0.50},
-                   {"action": "HUMAN", "min_signal": 0.0}]},
-        {"question": "escalate", "signal": "probability",
-         "tiers": [{"action": "ALERT", "min_signal": 0.95},
-                   {"action": "DEFER", "min_signal": 0.60},
-                   {"action": "NORMAL", "min_signal": 0.0}]},
+        {
+            "question": "department",
+            "signal": "confidence",
+            "tiers": [
+                {"action": "AUTO", "min_signal": 0.95},
+                {"action": "DEFER", "min_signal": 0.50},
+                {"action": "HUMAN", "min_signal": 0.0},
+            ],
+        },
+        {
+            "question": "escalate",
+            "signal": "probability",
+            "tiers": [
+                {"action": "ALERT", "min_signal": 0.95},
+                {"action": "DEFER", "min_signal": 0.60},
+                {"action": "NORMAL", "min_signal": 0.0},
+            ],
+        },
     ],
 }
 
@@ -103,16 +126,22 @@ def main() -> int:
                 dep_label = rng.choice([o for o in options if o != dep.choice])
             esc_label = (esc.noul >= 0.5) if rng.random() < 0.90 else (esc.noul < 0.5)
             fr_level = int(round(fr.score))
-            fr_label = fr_level if rng.random() < 0.80 else max(
-                0, min(len(QUESTIONS["frustration"].criteria) - 1,
-                       fr_level + rng.choice([-1, 1])))
+            fr_label = (
+                fr_level
+                if rng.random() < 0.80
+                else max(
+                    0,
+                    min(len(QUESTIONS["frustration"].criteria) - 1, fr_level + rng.choice([-1, 1])),
+                )
+            )
 
             row = {
-                "state": state, "state_ref": "syn-%04d" % i,
+                "state": state,
+                "state_ref": "syn-%04d" % i,
                 "model": answers.model,
                 # label 内联在每道题上——kev.data.load_records 的原生格式，
                 # 这份文件可以直接喂 kev.train；answers 是 jevkit 扩展字段
-                #（离线评测用），kev/TypeSafe 的请求解析会忽略多余字段
+                # （离线评测用），kev/TypeSafe 的请求解析会忽略多余字段
                 "questions": {
                     "department": {**q_req["department"], "label": dep_label},
                     "escalate": {**q_req["escalate"], "label": esc_label},
@@ -124,14 +153,25 @@ def main() -> int:
 
     with open(out / "triage_states.jsonl", "w", encoding="utf-8") as f:
         for i in range(30):
-            f.write(json.dumps({"state": make_state(rng), "state_ref": "perm-%02d" % i,
-                                "questions": dict(q_req)}, ensure_ascii=False) + "\n")
+            f.write(
+                json.dumps(
+                    {
+                        "state": make_state(rng),
+                        "state_ref": "perm-%02d" % i,
+                        "questions": dict(q_req),
+                    },
+                    ensure_ascii=False,
+                )
+                + "\n"
+            )
 
     with open(out / "triage-policy-template.json", "w", encoding="utf-8") as f:
         json.dump(POLICY_TEMPLATE, f, ensure_ascii=False, indent=2)
 
-    print("已生成：triage_labeled.jsonl（400 行，含 answers+labels）、"
-          "triage_states.jsonl（30 行）、triage-policy-template.json")
+    print(
+        "已生成：triage_labeled.jsonl（400 行，含 answers+labels）、"
+        "triage_states.jsonl（30 行）、triage-policy-template.json"
+    )
     return 0
 
 

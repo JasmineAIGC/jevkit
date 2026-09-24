@@ -1,24 +1,35 @@
-# -*- coding: utf-8 -*-
 """三原语与答案解析的校验规则。"""
 
 import pytest
 
 from jevkit import (
-    Answers, BackendError, Choice, ChoiceAnswer, Noul, NoulAnswer, Score,
-    ScoreAnswer, ValidationError, make_backend, parse_answer, state_digest,
+    Answers,
+    BackendError,
+    Choice,
+    ChoiceAnswer,
+    Noul,
+    NoulAnswer,
+    Score,
+    ScoreAnswer,
+    ValidationError,
+    make_backend,
+    parse_answer,
+    state_digest,
 )
 
 
 class TestChoice:
     def test_valid(self):
         c = Choice("Which team?", {"a": "desc", "b": None})
-        assert c.to_request() == {"type": "choice", "instructions": "Which team?",
-                                  "criteria": {"a": "desc", "b": None}}
+        assert c.to_request() == {
+            "type": "choice",
+            "instructions": "Which team?",
+            "criteria": {"a": "desc", "b": None},
+        }
 
     def test_rich_json_content_allowed(self):
         # kev 契约：instructions 与 criteria 描述接受任意 JSON 内容
-        c = Choice({"ask": "Which?", "ctx": ["a"]},
-                   {"a": {"d": 1}, "b": ["l"], "c": None, "d": 3})
+        c = Choice({"ask": "Which?", "ctx": ["a"]}, {"a": {"d": 1}, "b": ["l"], "c": None, "d": 3})
         req = c.to_request()
         assert req["instructions"]["ask"] == "Which?"
         assert req["criteria"]["c"] is None
@@ -63,9 +74,13 @@ class TestNoul:
 
 class TestParseAnswer:
     def test_native_shape_without_type(self):
-        a = parse_answer({"choice": "billing", "confidence": 0.88,
-                          "probabilities": {"returns": 0.04, "shipping": 0.08,
-                                            "billing": 0.88}})
+        a = parse_answer(
+            {
+                "choice": "billing",
+                "confidence": 0.88,
+                "probabilities": {"returns": 0.04, "shipping": 0.08, "billing": 0.88},
+            }
+        )
         assert isinstance(a, ChoiceAnswer)
         assert a.p_max == 0.88
 
@@ -74,9 +89,15 @@ class TestParseAnswer:
         assert isinstance(a, NoulAnswer) and a.noul == 0.93
 
     def test_score_string_keys_become_int(self):
-        a = parse_answer({"type": "score", "score": 1.44, "confidence": 0.78,
-                          "legend": {"0": "Calm", "1": "Frustrated", "2": "Angry"},
-                          "probabilities": {"0": 0.0, "1": 0.56, "2": 0.44}})
+        a = parse_answer(
+            {
+                "type": "score",
+                "score": 1.44,
+                "confidence": 0.78,
+                "legend": {"0": "Calm", "1": "Frustrated", "2": "Angry"},
+                "probabilities": {"0": 0.0, "1": 0.56, "2": 0.44},
+            }
+        )
         assert isinstance(a, ScoreAnswer)
         assert set(a.probabilities) == {0, 1, 2}
         assert a.score == pytest.approx(1.44)
@@ -88,9 +109,11 @@ class TestParseAnswer:
 
 class TestAnswersFromResponse:
     def test_full_payload(self):
-        payload = {"model": "jev-1.13.0",
-                   "usage": {"input_tokens": 210, "output_tokens": 12},
-                   "answers": {"escalate": {"type": "noul", "noul": 0.4}}}
+        payload = {
+            "model": "jev-1.13.0",
+            "usage": {"input_tokens": 210, "output_tokens": 12},
+            "answers": {"escalate": {"type": "noul", "noul": 0.4}},
+        }
         a = Answers.from_response(payload, latency_ms=88.0)
         assert a.model == "jev-1.13.0"
         assert a.input_tokens == 210 and a.output_tokens == 12

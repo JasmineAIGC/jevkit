@@ -1,19 +1,26 @@
-# -*- coding: utf-8 -*-
 """阈值编译与漂移检查：闭环两端的数值断言。"""
 
-import pytest
+from conftest import make_calibrated_examples, make_noul_examples
 
 from jevkit import Gate, Policy, PolicyLock, Signal, Tier, check_drift, compile_policy
-from conftest import make_calibrated_examples, make_noul_examples, triage_policy
 
 
 def template():
-    return Policy(version="triage-tpl", gates=(
-        Gate("department", Signal.CONFIDENCE, (
-            Tier("AUTO", 0.95), Tier("DEFER", 0.50), Tier("HUMAN", 0.0))),
-        Gate("escalate", Signal.PROBABILITY, (
-            Tier("ALERT", 0.95), Tier("DEFER", 0.60), Tier("NORMAL", 0.0))),
-    ))
+    return Policy(
+        version="triage-tpl",
+        gates=(
+            Gate(
+                "department",
+                Signal.CONFIDENCE,
+                (Tier("AUTO", 0.95), Tier("DEFER", 0.50), Tier("HUMAN", 0.0)),
+            ),
+            Gate(
+                "escalate",
+                Signal.PROBABILITY,
+                (Tier("ALERT", 0.95), Tier("DEFER", 0.60), Tier("NORMAL", 0.0)),
+            ),
+        ),
+    )
 
 
 class TestCompile:
@@ -37,20 +44,27 @@ class TestCompile:
     def test_clamp_when_tau_below_defer(self):
         # 全部 confidence=0.42、错误率 45%：预算 0.45 下 τ*=0（全覆盖即达标）
         # → τ* 低于 DEFER 档 0.50，必须被抬升并标记
-        from jevkit import Answers, ChoiceAnswer, LabeledExample
         from conftest import TRIAGE_QUESTIONS
+
+        from jevkit import Answers, ChoiceAnswer, LabeledExample
+
         examples = []
         for i in range(100):
-            correct = i < 55          # 精确 55% 正确 → 错误率恰 45% = 预算
+            correct = i < 55  # 精确 55% 正确 → 错误率恰 45% = 预算
             chosen = "returns" if correct else "shipping"
             label = "returns"
             probs = {"returns": 0.42, "shipping": 0.38, "billing": 0.20}
-            answers = Answers(model="synth", answers={
-                "department": ChoiceAnswer(chosen, 0.42, probs)})
-            examples.append(LabeledExample(
-                state="s%d" % i,
-                questions={"department": TRIAGE_QUESTIONS["department"]},
-                labels={"department": label}, answers=answers))
+            answers = Answers(
+                model="synth", answers={"department": ChoiceAnswer(chosen, 0.42, probs)}
+            )
+            examples.append(
+                LabeledExample(
+                    state="s%d" % i,
+                    questions={"department": TRIAGE_QUESTIONS["department"]},
+                    labels={"department": label},
+                    answers=answers,
+                )
+            )
         lock = compile_policy(examples, template(), budget=0.45)
         ev = {e["question"]: e for e in lock.evidence["gates"]}["department"]
         assert ev["clamped"] is True
@@ -67,8 +81,7 @@ class TestCompile:
 
     def test_lock_roundtrip(self, tmp_path):
         examples = make_calibrated_examples(200, seed=13)
-        lock = compile_policy(examples, template(), budget=0.08,
-                              data_sha256="deadbeefcafe0123")
+        lock = compile_policy(examples, template(), budget=0.08, data_sha256="deadbeefcafe0123")
         path = tmp_path / "policy.lock.json"
         lock.save(str(path))
         loaded = PolicyLock.load(str(path))
@@ -83,14 +96,12 @@ class TestCheckDrift:
 
     def test_same_distribution_ok(self):
         lock, _ = self._lock()
-        fresh = make_calibrated_examples(400, seed=99)   # 同分布不同种子
+        fresh = make_calibrated_examples(400, seed=99)  # 同分布不同种子
         report = check_drift(fresh, lock)
         assert report.ok, [r for r in report.failures()]
 
     def test_broken_distribution_flags_drift(self):
         lock, _ = self._lock()
-        import random
-        rng = random.Random(0)
         broken = make_calibrated_examples(400, seed=21)
         # 模拟分布崩坏：高置信段全错
         for ex in broken:
@@ -103,13 +114,18 @@ class TestCheckDrift:
 
     def test_policy_usable_after_compile(self):
         from jevkit import Answers, ChoiceAnswer, NoulAnswer, decide
+
         lock, _ = self._lock()
         policy = lock.policy
-        a = Answers(model="synth", answers={
-            "department": ChoiceAnswer("returns", 0.97,
-                                       {"returns": 0.97, "shipping": 0.02,
-                                        "billing": 0.01}),
-            "escalate": NoulAnswer(0.05)})
+        a = Answers(
+            model="synth",
+            answers={
+                "department": ChoiceAnswer(
+                    "returns", 0.97, {"returns": 0.97, "shipping": 0.02, "billing": 0.01}
+                ),
+                "escalate": NoulAnswer(0.05),
+            },
+        )
         rec = decide(a, policy, state_ref="t", state="s")
         assert rec.actions["department"]["action"] == "AUTO"
         assert rec.actions["escalate"]["action"] in ("NORMAL", "DEFER")

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """合成数据：造"过度自信"的概率对，用于演示与测试校准方法本身。
 
 复现笔记里 Nimble 论文 T=1 时的状态：挑中的答案平均报 ~0.9，
@@ -8,7 +7,6 @@
 from __future__ import annotations
 
 import random
-from typing import Sequence
 
 from .metrics import Pair
 

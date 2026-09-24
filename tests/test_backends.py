@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """三种后端：mock 确定性、http 重试、官方 SDK 适配（fake client 注入）。"""
 
 import json
@@ -9,13 +8,17 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 import pytest
 
 from jevkit import (
-    Answers, BackendError, Choice, HttpBackend, MockBackend, Noul,
-    TypesafeSdkBackend, make_backend,
+    BackendError,
+    Choice,
+    HttpBackend,
+    MockBackend,
+    Noul,
+    TypesafeSdkBackend,
+    make_backend,
 )
 
 QUESTIONS = {
-    "department": Choice("Which team?", {"returns": "R", "shipping": "S",
-                                         "billing": "B"}),
+    "department": Choice("Which team?", {"returns": "R", "shipping": "S", "billing": "B"}),
     "escalate": Noul("Urgent?"),
 }
 
@@ -39,17 +42,19 @@ class TestMockBackend:
     def test_probabilities_sum_to_one(self):
         b = MockBackend()
         a = b.ask("another ticket", QUESTIONS)
-        assert sum(a.answers["department"].probabilities.values()) == \
-            pytest.approx(1.0, abs=1e-3)
+        assert sum(a.answers["department"].probabilities.values()) == pytest.approx(1.0, abs=1e-3)
 
     def test_bias_changes_order_sensitivity(self):
         # 有偏置时，同一 state、不同候选顺序会得到不同分布（排列测试的物理基础）
         state = "biased ticket"
         b_bias, b_flat = MockBackend(bias=0.3), MockBackend(bias=0.0)
         q1 = QUESTIONS
-        q2 = {"department": q1["department"].shuffled(
-            list(reversed(list(q1["department"].criteria)))),
-            "escalate": q1["escalate"]}
+        q2 = {
+            "department": q1["department"].shuffled(
+                list(reversed(list(q1["department"].criteria)))
+            ),
+            "escalate": q1["escalate"],
+        }
         p_flat_1 = b_flat.ask(state, q1).answers["department"].probabilities
         p_flat_2 = b_flat.ask(state, q2).answers["department"].probabilities
         assert p_flat_1 == p_flat_2  # 无偏置 → 顺序无关
@@ -62,18 +67,24 @@ class _CannedHandler(BaseHTTPRequestHandler):
     attempts = 0
 
     def do_POST(self):
-        body = self.rfile.read(int(self.headers.get("Content-Length", 0)))
+        self.rfile.read(int(self.headers.get("Content-Length", 0)))
         _CannedHandler.attempts += 1
         if _CannedHandler.attempts <= 2:
             self.send_response(429)
             self.end_headers()
             return
-        resp = {"model": "kev-latest",
-                "usage": {"input_tokens": 50, "output_tokens": 5},
-                "answers": {"department": {
-                    "type": "choice", "choice": "billing", "confidence": 0.9,
-                    "probabilities": {"returns": 0.05, "shipping": 0.05,
-                                      "billing": 0.9}}}}
+        resp = {
+            "model": "kev-latest",
+            "usage": {"input_tokens": 50, "output_tokens": 5},
+            "answers": {
+                "department": {
+                    "type": "choice",
+                    "choice": "billing",
+                    "confidence": 0.9,
+                    "probabilities": {"returns": 0.05, "shipping": 0.05, "billing": 0.9},
+                }
+            },
+        }
         data = json.dumps(resp).encode()
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
@@ -96,10 +107,9 @@ class TestHttpBackend:
     def test_ask_with_retry_on_429(self):
         server = self._server()
         try:
-            backend = HttpBackend("http://127.0.0.1:%d" % server.server_port,
-                                  backoff_base=0.01)
+            backend = HttpBackend("http://127.0.0.1:%d" % server.server_port, backoff_base=0.01)
             answers = backend.ask("ticket", QUESTIONS, model="kev-latest")
-            assert _CannedHandler.attempts == 3          # 两次 429 + 一次成功
+            assert _CannedHandler.attempts == 3  # 两次 429 + 一次成功
             assert answers.answers["department"].choice == "billing"
             assert answers.model == "kev-latest"
         finally:
@@ -118,11 +128,11 @@ class TestHttpBackend:
                 self.send_header("Content-Length", str(len(data)))
                 self.end_headers()
                 self.wfile.write(data)
+
         server = HTTPServer(("127.0.0.1", 0), Handler)
         threading.Thread(target=server.serve_forever, daemon=True).start()
         try:
-            backend = HttpBackend("http://127.0.0.1:%d" % server.server_port,
-                                  max_retries=0)
+            backend = HttpBackend("http://127.0.0.1:%d" % server.server_port, max_retries=0)
             with pytest.raises(BackendError, match="422"):
                 backend.ask("x", QUESTIONS, model="m")
         finally:
@@ -138,14 +148,18 @@ class TestTypesafeSdkBackend:
 
     def test_fake_client_happy_path(self):
         fake_answer = types.SimpleNamespace(
-            choice="billing", confidence=0.9,
-            probabilities={"returns": 0.05, "shipping": 0.05, "billing": 0.9})
+            choice="billing",
+            confidence=0.9,
+            probabilities={"returns": 0.05, "shipping": 0.05, "billing": 0.9},
+        )
         fake_noul = types.SimpleNamespace(noul=0.31)
         fake_resp = types.SimpleNamespace(
             model="jev-1.13.0",
             answers={"department": fake_answer, "escalate": fake_noul},
             usage=types.SimpleNamespace(input_tokens=120, output_tokens=8),
-            request_id="req_abc", raw_http_response=None)
+            request_id="req_abc",
+            raw_http_response=None,
+        )
 
         seen = {}
 

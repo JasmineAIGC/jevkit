@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """Example 04 — The closed loop (compile → run → relabel → check).
 
 This is where the two layers meet:
@@ -28,8 +27,17 @@ import sys
 from pathlib import Path
 
 from jevkit import (
-    Gate, JsonlLedger, Policy, PolicyLock, PolicyError, Signal, Tier,
-    check_drift, compile_policy, decide, make_backend, read_examples,
+    Gate,
+    JsonlLedger,
+    Policy,
+    PolicyLock,
+    Signal,
+    Tier,
+    check_drift,
+    compile_policy,
+    decide,
+    make_backend,
+    read_examples,
     sha256_file,
 )
 
@@ -41,31 +49,49 @@ if not DATA.exists():
 # ---------------------------------------------------------------- 1. Template
 # Hand-write the tier STRUCTURE with placeholder auto thresholds; compile
 # fills in the numbers from data. Actions and structure stay yours.
-TEMPLATE = Policy(version="triage-v1", gates=(
-    Gate("department", Signal.CONFIDENCE, (
-        Tier("AUTO", 0.99), Tier("DEFER", 0.50), Tier("HUMAN", 0.0))),
-    Gate("escalate", Signal.PROBABILITY, (
-        Tier("ALERT", 0.99), Tier("DEFER", 0.60), Tier("NORMAL", 0.0))),
-))
+TEMPLATE = Policy(
+    version="triage-v1",
+    gates=(
+        Gate(
+            "department",
+            Signal.CONFIDENCE,
+            (Tier("AUTO", 0.99), Tier("DEFER", 0.50), Tier("HUMAN", 0.0)),
+        ),
+        Gate(
+            "escalate",
+            Signal.PROBABILITY,
+            (Tier("ALERT", 0.99), Tier("DEFER", 0.60), Tier("NORMAL", 0.0)),
+        ),
+    ),
+)
 
 # ---------------------------------------------------------------- 2. Compile
 examples = read_examples(str(DATA))
 BUDGET = 0.15
-lock = compile_policy(examples, TEMPLATE, budget=BUDGET,
-                      data_sha256=sha256_file(str(DATA)))
+lock = compile_policy(examples, TEMPLATE, budget=BUDGET, data_sha256=sha256_file(str(DATA)))
 lock_path = DATA_DIR / "04-policy.lock.json"
 lock.save(str(lock_path))
 
-print("compiled %s  (budget %.0f%%, data %s, model %s)"
-      % (lock.policy.version, BUDGET * 100,
-         lock.evidence["data_sha256"], ", ".join(lock.evidence["models"])))
+print(
+    "compiled %s  (budget %.0f%%, data %s, model %s)"
+    % (
+        lock.policy.version,
+        BUDGET * 100,
+        lock.evidence["data_sha256"],
+        ", ".join(lock.evidence["models"]),
+    )
+)
 for ev in lock.evidence["gates"]:
-    acc = "%.1f%%" % (ev["accuracy"] * 100) if isinstance(ev["accuracy"], float) \
-        or isinstance(ev["accuracy"], int) else "—"
+    acc = (
+        "%.1f%%" % (ev["accuracy"] * 100)
+        if isinstance(ev["accuracy"], float) or isinstance(ev["accuracy"], int)
+        else "—"
+    )
     cov = "%.1f%%" % (ev["coverage"] * 100) if ev["coverage"] else "0%"
-    print("  %-12s n=%-4d auto≥%.2f  cov %s  acc %s  %s"
-          % (ev["question"], ev["n"], ev["threshold"], cov, acc,
-             ev["note"] or "ok"))
+    print(
+        "  %-12s n=%-4d auto≥%.2f  cov %s  acc %s  %s"
+        % (ev["question"], ev["n"], ev["threshold"], cov, acc, ev["note"] or "ok")
+    )
 print()
 
 # ---------------------------------------------------------------- 3. Run with the lock
@@ -74,22 +100,27 @@ backend = make_backend("mock")
 ledger = JsonlLedger(str(DATA_DIR / "04-decisions.jsonl"))
 for ex in examples[:5]:
     answers = backend.ask(ex.state, ex.questions, model="mock-1.0")
-    record = decide(answers, runtime_policy, backend_name=backend.name,
-                    state_ref=ex.state_ref, state=ex.state,
-                    question_set_version="triage-questions-v1")
+    record = decide(
+        answers,
+        runtime_policy,
+        backend_name=backend.name,
+        state_ref=ex.state_ref,
+        state=ex.state,
+        question_set_version="triage-questions-v1",
+    )
     ledger.append(record)
 print("ran 5 tickets under the compiled policy → examples/data/04-decisions.jsonl")
 for rec in list(ledger)[:2]:
-    print("  [%s] department→%s escalate→%s"
-          % (rec.state_ref, rec.actions["department"]["action"],
-             rec.actions["escalate"]["action"]))
+    print(
+        "  [%s] department→%s escalate→%s"
+        % (rec.state_ref, rec.actions["department"]["action"], rec.actions["escalate"]["action"])
+    )
 print()
 
 # ---------------------------------------------------------------- 4. Drift check
 # Same distribution → clean.
 report = check_drift(examples, lock)
-print("check on the same data:      %s"
-      % ("✅ no drift" if report.ok else "⚠️ drift"))
+print("check on the same data:      %s" % ("✅ no drift" if report.ok else "⚠️ drift"))
 
 # Simulate degradation: flip 30% of the department labels (a model upgrade
 # or a question rewrite gone wrong would look like this).
@@ -104,11 +135,12 @@ for ex in degraded:
                 ex.labels["department"] = others[0]
 
 report2 = check_drift(degraded, lock)
-print("check on degraded data:      %s" % ("✅ no drift" if report2.ok
-                                           else "⚠️ DRIFT DETECTED"))
+print("check on degraded data:      %s" % ("✅ no drift" if report2.ok else "⚠️ DRIFT DETECTED"))
 for row in report2.failures():
-    print("  %-12s %-14s lock=%.4f new=%.4f"
-          % (row.question, row.metric, row.lock_value, row.new_value))
+    print(
+        "  %-12s %-14s lock=%.4f new=%.4f"
+        % (row.question, row.metric, row.lock_value, row.new_value)
+    )
 print()
 print("In CI, `jevkit check` turns this into a non-zero exit code; the")
 print("response is always: recompile (and re-review the policy), never ride it out.")

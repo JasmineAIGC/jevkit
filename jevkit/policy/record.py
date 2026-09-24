@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """决策日志。
 
 生产日志必须能回答："当时是 0.91 对 0.05，还是 0.36 对 0.34？"（笔记 5.4）
@@ -10,9 +9,10 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, dataclass, field
+from collections.abc import Iterator, Mapping
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
-from typing import Any, Iterator, Mapping, Union
+from typing import Any
 
 __all__ = ["DecisionRecord", "JsonlLedger"]
 
@@ -21,19 +21,19 @@ __all__ = ["DecisionRecord", "JsonlLedger"]
 class DecisionRecord:
     """一条决策的完整审计记录。字段集对应笔记 5.4③ 的必存清单。"""
 
-    ts: str                                        # ISO 8601（毫秒，UTC）
-    backend: str                                   # typesafe-sdk / http / mock
-    model: str                                     # 如 jev-1.13.0（锁版本的证据）
-    request_id: Union[str, None]                   # 官方端点回传，追责用
-    question_set_version: str                      # 如 triage-v1
-    state_ref: str                                 # 业务侧引用（工单号等）
-    state_sha256: str                              # state 短哈希
-    questions: dict[str, Any]                      # 当次的完整题集
-    raw: dict[str, Any]                            # 完整原始答案（含全部概率）
-    policy: dict[str, Any]                         # 政策快照（版本+阈值）
-    actions: dict[str, Any]                        # 每 gate 的动作与命中详情
-    latency_ms: Union[float, None] = None
-    usage: Union[dict[str, Any], None] = None      # input/output tokens
+    ts: str  # ISO 8601（毫秒，UTC）
+    backend: str  # typesafe-sdk / http / mock
+    model: str  # 如 jev-1.13.0（锁版本的证据）
+    request_id: str | None  # 官方端点回传，追责用
+    question_set_version: str  # 如 triage-v1
+    state_ref: str  # 业务侧引用（工单号等）
+    state_sha256: str  # state 短哈希
+    questions: dict[str, Any]  # 当次的完整题集
+    raw: dict[str, Any]  # 完整原始答案（含全部概率）
+    policy: dict[str, Any]  # 政策快照（版本+阈值）
+    actions: dict[str, Any]  # 每 gate 的动作与命中详情
+    latency_ms: float | None = None
+    usage: dict[str, Any] | None = None  # input/output tokens
 
     @staticmethod
     def now() -> str:
@@ -46,7 +46,7 @@ class DecisionRecord:
         return json.dumps(self.to_json(), ensure_ascii=False)
 
     @staticmethod
-    def from_json(d: Mapping[str, Any]) -> "DecisionRecord":
+    def from_json(d: Mapping[str, Any]) -> DecisionRecord:
         return DecisionRecord(
             ts=d["ts"],
             backend=d.get("backend", ""),
@@ -64,7 +64,7 @@ class DecisionRecord:
         )
 
     @staticmethod
-    def from_line(line: str) -> "DecisionRecord":
+    def from_line(line: str) -> DecisionRecord:
         return DecisionRecord.from_json(json.loads(line))
 
 

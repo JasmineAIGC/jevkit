@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """阈值编译与漂移检查 —— 政策层与评测层的闭环咬合点。
 
     标注数据 ──compile_policy──▶ policy.lock.json（阈值 + 证据）
@@ -20,18 +19,18 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, List, Sequence
+from typing import Any
 
 from .. import __version__
-from ..core.types import ChoiceAnswer, NoulAnswer, ScoreAnswer
+from ..core.types import ChoiceAnswer, NoulAnswer
 from ..policy.policy import Gate, Policy, Signal, Tier
 from .data import LabeledExample
 from .metrics import best_threshold, ece
 
-__all__ = ["GateEvidence", "PolicyLock", "compile_policy", "check_drift",
-           "DriftReport"]
+__all__ = ["GateEvidence", "PolicyLock", "compile_policy", "check_drift", "DriftReport"]
 
 
 def _gate_pairs(examples: Sequence[LabeledExample], gate: Gate) -> list[tuple[float, bool]]:
@@ -47,8 +46,7 @@ def _gate_pairs(examples: Sequence[LabeledExample], gate: Gate) -> list[tuple[fl
         if isinstance(a, NoulAnswer):
             out.append((float(a.noul), bool(label)))
         else:
-            value = float(a.p_max) if gate.signal is Signal.PROBABILITY \
-                else float(a.confidence)
+            value = float(a.p_max) if gate.signal is Signal.PROBABILITY else float(a.confidence)
             if isinstance(a, ChoiceAnswer):
                 correct = a.choice == label
             else:  # ScoreAnswer
@@ -66,9 +64,9 @@ class GateEvidence:
     threshold: float
     coverage: float
     accuracy: float
-    base_accuracy: float          # 全量准确率（不设阈值的底线）
+    base_accuracy: float  # 全量准确率（不设阈值的底线）
     ece: float
-    clamped: bool = False         # τ* 低于次高档阈值被抬升
+    clamped: bool = False  # τ* 低于次高档阈值被抬升
     note: str = ""
 
     def to_json(self) -> dict[str, Any]:
@@ -78,11 +76,17 @@ class GateEvidence:
             return None if isinstance(v, float) and not math.isfinite(v) else v
 
         return {
-            "question": self.question, "signal": self.signal, "n": self.n,
-            "budget": self.budget, "threshold": self.threshold,
-            "coverage": num(self.coverage), "accuracy": num(self.accuracy),
-            "base_accuracy": num(self.base_accuracy), "ece": num(self.ece),
-            "clamped": self.clamped, "note": self.note,
+            "question": self.question,
+            "signal": self.signal,
+            "n": self.n,
+            "budget": self.budget,
+            "threshold": self.threshold,
+            "coverage": num(self.coverage),
+            "accuracy": num(self.accuracy),
+            "base_accuracy": num(self.base_accuracy),
+            "ece": num(self.ece),
+            "clamped": self.clamped,
+            "note": self.note,
         }
 
 
@@ -95,38 +99,52 @@ class PolicyLock:
         return {"policy": self.policy.to_json(), "evidence": self.evidence}
 
     @staticmethod
-    def from_json(d: dict[str, Any]) -> "PolicyLock":
-        return PolicyLock(policy=Policy.from_json(d["policy"]),
-                          evidence=dict(d.get("evidence", {})))
+    def from_json(d: dict[str, Any]) -> PolicyLock:
+        return PolicyLock(
+            policy=Policy.from_json(d["policy"]), evidence=dict(d.get("evidence", {}))
+        )
 
     def save(self, path: str) -> None:
         with open(path, "w", encoding="utf-8") as f:
             json.dump(self.to_json(), f, ensure_ascii=False, indent=2)
 
     @staticmethod
-    def load(path: str) -> "PolicyLock":
+    def load(path: str) -> PolicyLock:
         with open(path, encoding="utf-8") as f:
             return PolicyLock.from_json(json.load(f))
 
 
-def compile_policy(examples: Sequence[LabeledExample], template: Policy, *,
-                   budget: float = 0.05, min_coverage: float = 0.05,
-                   data_sha256: str = "") -> PolicyLock:
+def compile_policy(
+    examples: Sequence[LabeledExample],
+    template: Policy,
+    *,
+    budget: float = 0.05,
+    min_coverage: float = 0.05,
+    data_sha256: str = "",
+) -> PolicyLock:
     """按错误预算为模板政策的每个 gate 编译 auto 档阈值。"""
     models = sorted({ex.answers.model for ex in examples if ex.answers is not None})
-    new_gates: List[Gate] = []
-    evidences: List[dict[str, Any]] = []
+    new_gates: list[Gate] = []
+    evidences: list[dict[str, Any]] = []
 
     for gate in template.gates:
         pairs = _gate_pairs(examples, gate)
         if len(pairs) < 20:
             new_gates.append(gate)
-            evidences.append(GateEvidence(
-                question=gate.question, signal=gate.signal.value, n=len(pairs),
-                budget=budget, threshold=gate.tiers[0].min_signal,
-                coverage=0.0, accuracy=float("nan"), base_accuracy=float("nan"),
-                ece=float("nan"),
-                note="样本不足（%d < 20），保留模板阈值" % len(pairs)).to_json())
+            evidences.append(
+                GateEvidence(
+                    question=gate.question,
+                    signal=gate.signal.value,
+                    n=len(pairs),
+                    budget=budget,
+                    threshold=gate.tiers[0].min_signal,
+                    coverage=0.0,
+                    accuracy=float("nan"),
+                    base_accuracy=float("nan"),
+                    ece=float("nan"),
+                    note="样本不足（%d < 20），保留模板阈值" % len(pairs),
+                ).to_json()
+            )
             continue
 
         tau, cov, acc = best_threshold(pairs, budget=budget, min_coverage=min_coverage)
@@ -151,20 +169,31 @@ def compile_policy(examples: Sequence[LabeledExample], template: Policy, *,
         new_gates.append(Gate(gate.question, gate.signal, tiers))
 
         if clamped:
-            note = ("τ* 低于次高档阈值 %.2f，已抬升——预算与档位结构冲突，"
-                    "考虑放宽预算或下调 DEFER 档" % gate.tiers[1].min_signal)
+            note = (
+                "τ* 低于次高档阈值 %.2f，已抬升——预算与档位结构冲突，"
+                "考虑放宽预算或下调 DEFER 档" % gate.tiers[1].min_signal
+            )
         elif cov == 0.0:
             note = "该预算下无可自动化区间：即使阈值 1.0 错误率也超预算"
         else:
             note = ""
-        evidences.append(GateEvidence(
-            question=gate.question, signal=gate.signal.value, n=len(pairs),
-            budget=budget, threshold=round(tau, 2), coverage=cov, accuracy=acc,
-            base_accuracy=base_acc, ece=calibration, clamped=clamped,
-            note=note).to_json())
+        evidences.append(
+            GateEvidence(
+                question=gate.question,
+                signal=gate.signal.value,
+                n=len(pairs),
+                budget=budget,
+                threshold=round(tau, 2),
+                coverage=cov,
+                accuracy=acc,
+                base_accuracy=base_acc,
+                ece=calibration,
+                clamped=clamped,
+                note=note,
+            ).to_json()
+        )
 
-    compiled = Policy(version="%s@budget%.2f" % (template.version, budget),
-                      gates=tuple(new_gates))
+    compiled = Policy(version="%s@budget%.2f" % (template.version, budget), gates=tuple(new_gates))
     evidence = {
         "created": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "jevkit_version": __version__,
@@ -188,7 +217,7 @@ class DriftRow:
 
 @dataclass
 class DriftReport:
-    rows: List[DriftRow]
+    rows: list[DriftRow]
     n_examples: int
 
     @property
@@ -199,16 +228,21 @@ class DriftReport:
         return [r for r in self.rows if not r.ok]
 
 
-def check_drift(examples: Sequence[LabeledExample], lock: PolicyLock, *,
-                tol_accuracy: float = 0.05, tol_coverage: float = 0.10,
-                tol_ece: float = 0.05) -> DriftReport:
+def check_drift(
+    examples: Sequence[LabeledExample],
+    lock: PolicyLock,
+    *,
+    tol_accuracy: float = 0.05,
+    tol_coverage: float = 0.10,
+    tol_ece: float = 0.05,
+) -> DriftReport:
     """在新数据上重算每个 gate 的指标，对比 lock 里的证据。
 
     三个观测轴：阈值处准确率、覆盖率、校准误差（ECE）。
     任一超容差即判漂移——通常意味着：模型版本变了 / 题集改了 / 分布移了，
     三者都要求重新编译而不是硬扛。
     """
-    rows: List[DriftRow] = []
+    rows: list[DriftRow] = []
     gate_by_q = {g.question: g for g in lock.policy.gates}
     for ev in lock.evidence.get("gates", []):
         q = ev["question"]
@@ -220,8 +254,7 @@ def check_drift(examples: Sequence[LabeledExample], lock: PolicyLock, *,
         thr = float(ev["threshold"])
         pairs = _gate_pairs(examples, gate)
         if len(pairs) < 10:
-            rows.append(DriftRow(q, "n", float(ev["n"]), len(pairs),
-                                 len(pairs) >= 10))
+            rows.append(DriftRow(q, "n", float(ev["n"]), len(pairs), len(pairs) >= 10))
             continue
         sub = [p for p in pairs if p[0] >= thr]
         acc = (sum(1 for _, y in sub if y) / len(sub)) if sub else float("nan")
@@ -229,12 +262,29 @@ def check_drift(examples: Sequence[LabeledExample], lock: PolicyLock, *,
         new_ece = ece(pairs)[0]
 
         if ev.get("accuracy") is not None:
-            rows.append(DriftRow(q, "accuracy@thr", float(ev["accuracy"]), acc,
-                                 abs(acc - float(ev["accuracy"])) <= tol_accuracy))
+            rows.append(
+                DriftRow(
+                    q,
+                    "accuracy@thr",
+                    float(ev["accuracy"]),
+                    acc,
+                    abs(acc - float(ev["accuracy"])) <= tol_accuracy,
+                )
+            )
         if ev.get("coverage") is not None:
-            rows.append(DriftRow(q, "coverage@thr", float(ev["coverage"]), cov,
-                                 (float(ev["coverage"]) - cov) <= tol_coverage))
+            rows.append(
+                DriftRow(
+                    q,
+                    "coverage@thr",
+                    float(ev["coverage"]),
+                    cov,
+                    (float(ev["coverage"]) - cov) <= tol_coverage,
+                )
+            )
         if ev.get("ece") is not None:
-            rows.append(DriftRow(q, "ece", float(ev["ece"]), new_ece,
-                                 abs(new_ece - float(ev["ece"])) <= tol_ece))
+            rows.append(
+                DriftRow(
+                    q, "ece", float(ev["ece"]), new_ece, abs(new_ece - float(ev["ece"])) <= tol_ece
+                )
+            )
     return DriftReport(rows=rows, n_examples=len(examples))

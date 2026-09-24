@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """jevkit —— Jev / Kev（System One）政策层 + 评测层统一框架。
 
 一句话：非结构化状态进，带概率的类型化决策出；
@@ -20,25 +19,71 @@
 
 __version__ = "0.1.0"
 
-from .errors import (  # noqa: F401
-    BackendError, JevkitError, PolicyError, ValidationError,
-)
 from .core import (  # noqa: F401
-    JSONContent, Answers, AnyAnswer, Backend, Choice, ChoiceAnswer,
-    HttpBackend, MockBackend, Noul, NoulAnswer, Question, Score, ScoreAnswer,
-    TypesafeSdkBackend, make_backend, parse_answer, question_from_request,
+    Answers,
+    AnyAnswer,
+    Backend,
+    Choice,
+    ChoiceAnswer,
+    HttpBackend,
+    JSONContent,
+    MockBackend,
+    Noul,
+    NoulAnswer,
+    Question,
+    Score,
+    ScoreAnswer,
+    TypesafeSdkBackend,
+    make_backend,
+    parse_answer,
+    question_from_request,
     state_digest,
 )
-from .policy import (  # noqa: F401
-    DecisionRecord, Gate, JsonlLedger, Policy, Signal, Tier, decide,
-    signal_value,
+from .errors import (  # noqa: F401
+    BackendError,
+    JevkitError,
+    PolicyError,
+    ValidationError,
 )
 from .eval import (  # noqa: F401
-    CalibrationReport, DriftReport, LabeledExample, PermuteResult, PolicyLock,
-    accuracy, apply_temperature, best_threshold, brier, calibrate_report,
-    check_drift, choice_logloss_mc, compile_policy, coverage_table, ece,
-    fit_temperature, iter_examples, logloss, overconfident_pairs,
-    pairs_from_examples, perfectly_calibrated_pairs, permute_report,
-    permute_state, read_examples, reliability_table, score_mae, sha256_file,
-    shuffled_choice_questions, split_half, with_predictions,
+    CalibrationReport,
+    DriftReport,
+    LabeledExample,
+    PermuteResult,
+    PolicyLock,
+    accuracy,
+    apply_temperature,
+    best_threshold,
+    brier,
+    calibrate_report,
+    check_drift,
+    choice_logloss_mc,
+    compile_policy,
+    coverage_table,
+    ece,
+    fit_temperature,
+    iter_examples,
+    logloss,
+    overconfident_pairs,
+    pairs_from_examples,
+    perfectly_calibrated_pairs,
+    permute_report,
+    permute_state,
+    read_examples,
+    reliability_table,
+    score_mae,
+    sha256_file,
+    shuffled_choice_questions,
+    split_half,
+    with_predictions,
+)
+from .policy import (  # noqa: F401
+    DecisionRecord,
+    Gate,
+    JsonlLedger,
+    Policy,
+    Signal,
+    Tier,
+    decide,
+    signal_value,
 )

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """Example 01 — The three primitives and the backends (jevkit.core).
 
 System One's entire API surface: one state + a few atomic questions,
@@ -25,12 +24,14 @@ QUESTIONS = {
     # Choice: pick one of 1–255 named candidates. Answer: chosen key +
     # full probability distribution + confidence.
     "department": Choice(
-        instructions={"ask": "Which team handles this ticket?",
-                      "context": ["customer support triage"]},   # JSON, not just str
+        instructions={
+            "ask": "Which team handles this ticket?",
+            "context": ["customer support triage"],
+        },  # JSON, not just str
         criteria={
             "returns": "Exchanges, refunds, wrong or damaged items",
             "shipping": "Delivery status, delays, lost packages",
-            "billing": None,          # None = the option name is self-explanatory
+            "billing": None,  # None = the option name is self-explanatory
         },
     ),
     # Noul: a yes/no judgment. Answer: a single 0..1 probability —
@@ -38,8 +39,7 @@ QUESTIONS = {
     "escalate": Noul("Does this need urgent human attention?"),
     # Score: an ordered scale. Answer: expected level + per-level
     # probabilities + legend. Keep levels interpretable, not finely graded.
-    "frustration": Score("How frustrated is the customer?",
-                         ["Calm", "Frustrated", "Very angry"]),
+    "frustration": Score("How frustrated is the customer?", ["Calm", "Frustrated", "Very angry"]),
 }
 
 STATE = {
@@ -61,15 +61,17 @@ backend = make_backend(spec)
 # ---------------------------------------------------------------- 3. Ask once
 answers = backend.ask(STATE, QUESTIONS, model=model)
 
-print("backend=%s  model=%s  latency=%sms  request_id=%s"
-      % (backend.name, answers.model, answers.latency_ms, answers.request_id))
+print(
+    "backend=%s  model=%s  latency=%sms  request_id=%s"
+    % (backend.name, answers.model, answers.latency_ms, answers.request_id)
+)
 print()
 
 dep = answers.answers["department"]
 print("department (choice)")
 print("  chosen       :", dep.choice)
-print("  confidence   : %.4f" % dep.confidence)      # (p_max − 1/K)/(1 − 1/K)
-print("  distribution : %s" % dep.probabilities)      # full, not just the top pick
+print("  confidence   : %.4f" % dep.confidence)  # (p_max − 1/K)/(1 − 1/K)
+print("  distribution : %s" % dep.probabilities)  # full, not just the top pick
 print("  p_max        : %.4f" % dep.p_max)
 
 esc = answers.answers["escalate"]
@@ -78,8 +80,7 @@ print("  probability  : %.4f  (this IS the confidence — there is no other)" % 
 
 fr = answers.answers["frustration"]
 print("frustration (score)")
-print("  expected lvl : %.2f  → %r" % (fr.score,
-      fr.legend.get(int(round(fr.score)))))
+print("  expected lvl : %.2f  → %r" % (fr.score, fr.legend.get(int(round(fr.score)))))
 print("  distribution : %s" % fr.probabilities)
 
 # Two facts worth internalizing:

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """Ticket triage router — the "putting it together" example.
 
 Everything the tutorial scripts show piece by piece, in the shape of a
@@ -15,9 +14,9 @@ backend switch, decide() + ledger, done.
 import sys
 from pathlib import Path
 
-from jevkit import JsonlLedger, decide, make_backend
-
 from common import TRIAGE_FIXTURES, TRIAGE_QUESTIONS, TRIAGE_SAMPLES, triage_policy
+
+from jevkit import JsonlLedger, decide, make_backend
 
 backend = make_backend("mock", fixtures=TRIAGE_FIXTURES)
 # backend = make_backend("http://127.0.0.1:8009")            # kev: python -m kev.serve ...
@@ -30,18 +29,25 @@ def main() -> int:
     ledger = JsonlLedger(str(Path(__file__).parent / "data" / "triage-decisions.jsonl"))
     for ref, state in TRIAGE_SAMPLES:
         answers = backend.ask(state, TRIAGE_QUESTIONS, model="mock-1.0")
-        record = decide(answers, policy, backend_name=backend.name,
-                        state_ref=ref, state=state,
-                        question_set_version="triage-questions-v1",
-                        question_set=TRIAGE_QUESTIONS)
+        record = decide(
+            answers,
+            policy,
+            backend_name=backend.name,
+            state_ref=ref,
+            state=state,
+            question_set_version="triage-questions-v1",
+            question_set=TRIAGE_QUESTIONS,
+        )
         ledger.append(record)
         print("─" * 72)
         print("[%s] %s" % (ref, state))
         for q, act in record.actions.items():
             print("  %-12s %-6s %s" % (q, act["action"], act["detail"]))
     print("─" * 72)
-    print("decision log → examples/data/triage-decisions.jsonl "
-          "(full distributions + policy snapshot, auditable)")
+    print(
+        "decision log → examples/data/triage-decisions.jsonl "
+        "(full distributions + policy snapshot, auditable)"
+    )
     return 0
 
 

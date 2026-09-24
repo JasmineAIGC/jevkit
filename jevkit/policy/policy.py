@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """政策层：把概率翻译成动作。
 
 核心立场（笔记 5.4）：模型负责不确定性，代码负责政策。
@@ -21,12 +20,17 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Mapping
+from typing import Any
 
 from ..core.types import (
-    Answers, AnyAnswer, NoulAnswer, PolicyError, state_digest,
+    Answers,
+    AnyAnswer,
+    NoulAnswer,
+    PolicyError,
+    state_digest,
 )
 from .record import DecisionRecord
 
@@ -50,7 +54,8 @@ def signal_value(answer: AnyAnswer, signal: Signal) -> float:
         if isinstance(answer, NoulAnswer):
             raise PolicyError(
                 "noul 题没有独立 confidence（概率本身就是置信度）。"
-                "对 noul 题请用 signal=PROBABILITY —— 拿 confidence 当准确率是踩坑第 2 条")
+                "对 noul 题请用 signal=PROBABILITY —— 拿 confidence 当准确率是踩坑第 2 条"
+            )
         return float(answer.confidence)
     # PROBABILITY
     if isinstance(answer, NoulAnswer):
@@ -83,10 +88,10 @@ class Gate:
         if not tiers:
             raise PolicyError("Gate %r 至少要有一档 Tier" % self.question)
         thresholds = [t.min_signal for t in tiers]
-        if any(a <= b for a, b in zip(thresholds, thresholds[1:])):
+        if any(a <= b for a, b in zip(thresholds, thresholds[1:], strict=False)):
             raise PolicyError(
-                "Gate %r 的 tiers 必须按 min_signal 严格降序：%s"
-                % (self.question, thresholds))
+                "Gate %r 的 tiers 必须按 min_signal 严格降序：%s" % (self.question, thresholds)
+            )
         object.__setattr__(self, "tiers", tiers)
 
     def evaluate(self, answers: Answers) -> tuple[Tier, float]:
@@ -96,7 +101,8 @@ class Gate:
             if value >= tier.min_signal:
                 return tier, value
         raise PolicyError(  # 理论到不了这里：最后一档 min_signal 应为 0
-            "Gate %r 没有兜底档（signal=%.3f 落在所有档位之下）" % (self.question, value))
+            "Gate %r 没有兜底档（signal=%.3f 落在所有档位之下）" % (self.question, value)
+        )
 
 
 @dataclass(frozen=True)
@@ -122,20 +128,23 @@ class Policy:
         return {
             "version": self.version,
             "gates": [
-                {"question": g.question, "signal": g.signal.value,
-                 "tiers": [{"action": t.action, "min_signal": t.min_signal}
-                           for t in g.tiers]}
+                {
+                    "question": g.question,
+                    "signal": g.signal.value,
+                    "tiers": [{"action": t.action, "min_signal": t.min_signal} for t in g.tiers],
+                }
                 for g in self.gates
             ],
         }
 
     @staticmethod
-    def from_json(data: Mapping[str, Any]) -> "Policy":
+    def from_json(data: Mapping[str, Any]) -> Policy:
         gates = tuple(
-            Gate(question=g["question"],
-                 signal=Signal(g["signal"]),
-                 tiers=tuple(Tier(t["action"], float(t["min_signal"]))
-                             for t in g["tiers"]))
+            Gate(
+                question=g["question"],
+                signal=Signal(g["signal"]),
+                tiers=tuple(Tier(t["action"], float(t["min_signal"])) for t in g["tiers"]),
+            )
             for g in data["gates"]
         )
         return Policy(version=data["version"], gates=gates)
@@ -144,13 +153,16 @@ class Policy:
         return decide(answers, self, **context)
 
 
-def decide(answers: Answers, policy: Policy, *,
-           backend_name: str = "",
-           state_ref: str = "",
-           state: Any = None,
-           question_set_version: str = "questions-untitled",
-           question_set: Mapping[str, Any] | None = None,
-           ) -> DecisionRecord:
+def decide(
+    answers: Answers,
+    policy: Policy,
+    *,
+    backend_name: str = "",
+    state_ref: str = "",
+    state: Any = None,
+    question_set_version: str = "questions-untitled",
+    question_set: Mapping[str, Any] | None = None,
+) -> DecisionRecord:
     """纯函数：类型化答案 + 政策 → 决策记录（含完整审计上下文）。
 
     state 与 state_ref 至少给一个（日志要能回到现场）；
@@ -167,15 +179,18 @@ def decide(answers: Answers, policy: Policy, *,
             "signal_value": round(value, 6),
             "threshold": tier.min_signal,
             "action": tier.action,
-            "detail": "%s=%.4f ≥ %.2f → %s" % (gate.signal.value, value,
-                                               tier.min_signal, tier.action),
+            "detail": "%s=%.4f ≥ %.2f → %s"
+            % (gate.signal.value, value, tier.min_signal, tier.action),
         }
 
     sha = state_digest(state) if state is not None else ""
     questions_snapshot = (
-        {k: (q.to_request() if hasattr(q, "to_request") else dict(q))
-         for k, q in question_set.items()}
-        if question_set is not None else dict(answers.raw)
+        {
+            k: (q.to_request() if hasattr(q, "to_request") else dict(q))
+            for k, q in question_set.items()
+        }
+        if question_set is not None
+        else dict(answers.raw)
     )
 
     return DecisionRecord(
@@ -191,6 +206,5 @@ def decide(answers: Answers, policy: Policy, *,
         policy=policy.to_json(),
         actions=actions,
         latency_ms=answers.latency_ms,
-        usage={"input_tokens": answers.input_tokens,
-               "output_tokens": answers.output_tokens},
+        usage={"input_tokens": answers.input_tokens, "output_tokens": answers.output_tokens},
     )
