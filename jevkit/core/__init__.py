@@ -23,6 +23,6 @@ from .types import (  # noqa: F401
     Score,
     ScoreAnswer,
     parse_answer,
-    question_from_request,
+    parse_question,
     state_digest,
 )

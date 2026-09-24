@@ -124,7 +124,7 @@ class Noul:
 Question = Choice | Score | Noul
 
 
-def question_from_request(payload: Mapping[str, Any]) -> Question:
+def parse_question(payload: Mapping[str, Any]) -> Question:
     """从请求 JSON 反序列化题目（读数据文件、还原日志用）。"""
     qtype = payload.get("type")
     if qtype == "choice":

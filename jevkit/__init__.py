@@ -36,7 +36,7 @@ from .core import (  # noqa: F401
     TypesafeSdkBackend,
     make_backend,
     parse_answer,
-    question_from_request,
+    parse_question,
     state_digest,
 )
 from .errors import (  # noqa: F401

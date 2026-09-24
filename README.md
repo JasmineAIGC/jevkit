@@ -209,10 +209,6 @@ python examples/make_example_data.py          # regenerate examples/data/
 
 Contributions welcome — see [CONTRIBUTING.md](./CONTRIBUTING.md).
 
-## Scope (not in v0.1)
-
-Async clients, web dashboards, fine-tuning wrappers (kev already ships `kev.train`), LangChain/PydanticAI integrations, advanced ordinal metrics for score questions, multi-policy shadow mode.
-
 ## License
 
 [MIT](./LICENSE)

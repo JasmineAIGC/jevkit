@@ -27,7 +27,7 @@ from collections.abc import Iterator, Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
-from ..core.types import Answers, Question, ValidationError, question_from_request
+from ..core.types import Answers, Question, ValidationError, parse_question
 
 __all__ = [
     "LabeledExample",
@@ -63,7 +63,7 @@ def _extract_labels(row: Mapping[str, Any], questions: dict[str, Question]) -> d
 def parse_row(row: Mapping[str, Any]) -> LabeledExample:
     if "state" not in row or "questions" not in row:
         raise ValidationError("数据行必须包含 state 与 questions 字段：%r" % (sorted(row.keys()),))
-    questions = {k: question_from_request(v) for k, v in row["questions"].items()}
+    questions = {k: parse_question(v) for k, v in row["questions"].items()}
     ex = LabeledExample(
         state=row["state"],
         questions=questions,

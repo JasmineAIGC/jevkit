@@ -169,10 +169,6 @@ KEV_SRC=/tmp/kev pytest tests/test_kev_compat.py
 python examples/make_example_data.py     # 重新生成 examples/data/
 ```
 
-## v0.1 不做
-
-异步客户端、Web 仪表盘、微调训练封装（kev 已有 `kev.train`）、LangChain/PydanticAI 集成、score 高级 ordinal 指标、多政策影子模式。
-
 ## License
 
 MIT

@@ -139,7 +139,7 @@ class HttpBackend:
         return answers
 
     # kev 独有扩展：POST /v1/systemone/permute（一次转发跑多种选项顺序）
-    native_permute = True
+    supports_native_permute = True
 
     def permute(
         self,

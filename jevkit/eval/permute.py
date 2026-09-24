@@ -124,7 +124,7 @@ def permute_state(
     # 优先原生端点（一次转发跑多种顺序，省 token 也省往返）
     per_question: dict[str, list[Answers]] = {}
     modes: dict[str, str] = {}
-    if getattr(backend, "native_permute", False):
+    if getattr(backend, "supports_native_permute", False):
         for key in choice_keys:
             try:
                 runs = backend.permute(
