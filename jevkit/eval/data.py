@@ -24,7 +24,7 @@ from __future__ import annotations
 import hashlib
 import json
 from collections.abc import Iterator, Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any
 
 from ..core.types import Answers, Question, ValidationError, parse_question
@@ -106,12 +106,13 @@ def sha256_file(path: str) -> str:
 def with_predictions(
     examples: list[LabeledExample], backend, *, model: str = ""
 ) -> list[LabeledExample]:
-    """对缺 answers 的行现场取预测（返回新列表，原行不动）。"""
+    """对缺 answers 的行现场取预测，返回新列表（原 LabeledExample 不被修改）。"""
     out = []
     for ex in examples:
         if ex.answers is None:
-            ex.answers = backend.ask(ex.state, ex.questions, model=model)
-        out.append(ex)
+            out.append(replace(ex, answers=backend.ask(ex.state, ex.questions, model=model)))
+        else:
+            out.append(ex)
     return out
 
 

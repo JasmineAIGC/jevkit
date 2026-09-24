@@ -34,6 +34,17 @@ class TestMockBackend:
         # 选中项必须是概率 argmax；confidence 与 p_max 同源
         assert dep.choice == max(dep.probabilities, key=dep.probabilities.get)
 
+    def test_score_only_question_set(self):
+        # 回归：score 分支曾误用 choice 分支的遗留变量（仅 score 题时 NameError）
+        from jevkit import Score
+
+        answers = MockBackend().ask(
+            "any state", {"frustration": Score("How upset?", ["calm", "angry"])}
+        )
+        a = answers.answers["frustration"]
+        assert 0.0 <= a.score <= 1.0
+        assert sum(a.probabilities.values()) == pytest.approx(1.0, abs=1e-3)
+
     def test_fixture_hit(self):
         fixtures = {"exact state": {"escalate": {"type": "noul", "noul": 0.93}}}
         a = MockBackend(fixtures=fixtures).ask("exact state", QUESTIONS)

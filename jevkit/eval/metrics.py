@@ -11,8 +11,8 @@
 from __future__ import annotations
 
 import math
-from collections.abc import Iterable, Sequence
-from typing import NamedTuple
+from collections.abc import Iterable, Mapping, Sequence
+from typing import Any, NamedTuple
 
 from ..core.types import Answers, ChoiceAnswer, NoulAnswer, ScoreAnswer
 
@@ -138,7 +138,9 @@ def best_threshold(
 # ---------------------------------------------------------------- 从数据到度量对
 
 
-def pairs_from_examples(examples: Iterable[tuple[Answers, object]], question: str) -> list[Pair]:
+def pairs_from_examples(
+    examples: Iterable[tuple[Answers, Mapping[str, Any]]], question: str
+) -> list[Pair]:
     """把 (Answers, labels) 序列折算成二值校准对。
 
     - noul   → (noul 概率, 标签为真)
@@ -162,7 +164,7 @@ def pairs_from_examples(examples: Iterable[tuple[Answers, object]], question: st
     return out
 
 
-def score_mae(examples: Iterable[tuple[Answers, object]], question: str) -> float:
+def score_mae(examples: Iterable[tuple[Answers, Mapping[str, Any]]], question: str) -> float:
     """score 题专用：期望档位对标签档位的平均绝对误差（档数单位）。"""
     errs = []
     for answers, labels in examples:
@@ -175,7 +177,7 @@ def score_mae(examples: Iterable[tuple[Answers, object]], question: str) -> floa
 
 
 def choice_logloss_mc(
-    examples: Iterable[tuple[Answers, object]], question: str, eps: float = 1e-12
+    examples: Iterable[tuple[Answers, Mapping[str, Any]]], question: str, eps: float = 1e-12
 ) -> float:
     """choice 题专用：多类 NLL = mean(−log p_label)，衡量整个分布的质量。"""
     vals = []

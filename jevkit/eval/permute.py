@@ -141,18 +141,20 @@ def permute_state(
     perm_answers: list[Answers] = []
     missing = [k for k in choice_keys if k not in per_question]
     if missing:
-        seen_orders: list[list[str]] = []
+        seen: set[tuple[tuple[str, ...], ...]] = set()
         attempts = 0
         while len(perms) < n_perm and attempts < n_perm * 4:
             attempts += 1
             cand = shuffled_choice_questions(questions, rng)
-            sig = [
-                list(cand[k].criteria.keys()) if isinstance(cand[k], Choice) else []
-                for k in sorted(cand)
-            ]
-            if sig in seen_orders:
+            # 签名 = 每题的选项顺序（非 choice 题记空元组）
+            sig_parts: list[tuple[str, ...]] = []
+            for k in sorted(cand):
+                q2 = cand[k]
+                sig_parts.append(tuple(q2.criteria.keys()) if isinstance(q2, Choice) else ())
+            sig = tuple(sig_parts)
+            if sig in seen:
                 continue
-            seen_orders.append(sig)
+            seen.add(sig)
             perms.append(cand)
         perm_answers = [backend.ask(state, pq, model=model) for pq in perms]
         for key in missing:
@@ -172,10 +174,13 @@ def permute_state(
 
         runs = per_question.get(key, perm_answers)
         b = base.answers[key]
+        assert isinstance(b, ChoiceAnswer)  # 仅 choice 题进入排列指标
+
         drift_max, kl_sum, flips = 0.0, 0.0, 0
         picks: dict[str, int] = {}
         for pa in runs:
             a = pa.answers[key]
+            assert isinstance(a, ChoiceAnswer)
             for opt in b.probabilities:
                 drift_max = max(
                     drift_max, abs(b.probabilities[opt] - a.probabilities.get(opt, 0.0))

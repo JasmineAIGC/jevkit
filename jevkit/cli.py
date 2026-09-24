@@ -21,7 +21,7 @@ import sys
 from typing import Any
 
 from . import __version__
-from .core import Choice, Noul, Score, make_backend
+from .core import Choice, Noul, Score, ScoreAnswer, make_backend
 from .eval import (
     LabeledExample,
     PolicyLock,
@@ -215,6 +215,7 @@ def cmd_demo(args: argparse.Namespace) -> int:
         for q, act in rec.actions.items():
             print("  %-12s %-6s %s" % (q, act["action"], act["detail"]))
         fr = answers.answers["frustration"]
+        assert isinstance(fr, ScoreAnswer)
         print(
             "  %-12s score=%.2f（%s）"
             % ("frustration", fr.score, fr.legend.get(int(round(fr.score)), "?"))

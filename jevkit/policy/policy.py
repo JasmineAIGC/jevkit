@@ -92,6 +92,13 @@ class Gate:
             raise PolicyError(
                 "Gate %r 的 tiers 必须按 min_signal 严格降序：%s" % (self.question, thresholds)
             )
+        if tiers[-1].min_signal != 0.0:
+            # 兜底档在构造期就拦住，而不是等 decide() 时信号落空才报错
+            raise PolicyError(
+                "Gate %r 缺兜底档：最后一档 min_signal 必须为 0.0"
+                "（当前 %.2f）——否则低置信样本会落出所有档位"
+                % (self.question, tiers[-1].min_signal)
+            )
         object.__setattr__(self, "tiers", tiers)
 
     def evaluate(self, answers: Answers) -> tuple[Tier, float]:
@@ -100,7 +107,7 @@ class Gate:
         for tier in self.tiers:
             if value >= tier.min_signal:
                 return tier, value
-        raise PolicyError(  # 理论到不了这里：最后一档 min_signal 应为 0
+        raise PolicyError(  # 构造期已保证兜底档 min_signal=0，此处仅为防御
             "Gate %r 没有兜底档（signal=%.3f 落在所有档位之下）" % (self.question, value)
         )
 

@@ -6,6 +6,7 @@ import pytest
 from conftest import make_calibrated_examples, make_noul_examples
 
 from jevkit import (
+    MockBackend,
     accuracy,
     apply_temperature,
     best_threshold,
@@ -110,6 +111,21 @@ class TestPairsFromExamples:
         examples[0].labels = {}
         pairs = pairs_from_examples([(e.answers, e.labels) for e in examples], "department")
         assert len(pairs) == 49
+
+
+class TestWithPredictions:
+    def test_original_examples_untouched(self):
+        from conftest import TRIAGE_QUESTIONS
+
+        from jevkit import LabeledExample, with_predictions
+
+        raw = [
+            LabeledExample(state="s%d" % i, questions={"escalate": TRIAGE_QUESTIONS["escalate"]})
+            for i in range(3)
+        ]
+        out = with_predictions(raw, MockBackend(), model="mock-1.0")
+        assert all(ex.answers is not None for ex in out)
+        assert all(ex.answers is None for ex in raw)  # 原对象不被修改
 
 
 class TestSupplementaryMetrics:

@@ -53,6 +53,11 @@ class TestStructure:
         with pytest.raises(PolicyError, match="严格降序"):
             Gate("q", Signal.CONFIDENCE, (Tier("AUTO", 0.5), Tier("DEFER", 0.7)))
 
+    def test_missing_fallback_tier_rejected_at_construction(self):
+        # 兜底档缺失应在构造期拦截，而非 decide() 时信号落空才报错
+        with pytest.raises(PolicyError, match="兜底"):
+            Gate("q", Signal.CONFIDENCE, (Tier("AUTO", 0.9), Tier("DEFER", 0.3)))
+
     def test_policy_version_required(self):
         with pytest.raises(PolicyError, match="version"):
             Policy(

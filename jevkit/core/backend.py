@@ -22,6 +22,7 @@ from typing import Any, Protocol, runtime_checkable
 
 from .types import (
     Answers,
+    AnyAnswer,
     BackendError,
     Choice,
     Noul,
@@ -260,7 +261,7 @@ class TypesafeSdkBackend:
         # 统一转成 jevkit 类型（SDK 的 pydantic 模型字段名与原始响应一致）
         from .types import ChoiceAnswer, NoulAnswer, ScoreAnswer
 
-        typed = {}
+        typed: dict[str, AnyAnswer] = {}
         for key, a in (resp.answers or {}).items():
             if hasattr(a, "noul"):
                 typed[key] = NoulAnswer(float(a.noul))
@@ -281,12 +282,12 @@ class TypesafeSdkBackend:
                 )
             elif hasattr(a, "score"):
                 legend = {int(k): str(v) for k, v in a.legend.items()}
-                probs = {int(k): float(v) for k, v in a.probabilities.items()}
+                level_probs = {int(k): float(v) for k, v in a.probabilities.items()}
                 typed[key] = ScoreAnswer(
                     score=float(a.score),
                     confidence=float(a.confidence),
                     legend=legend,
-                    probabilities=probs,
+                    probabilities=level_probs,
                 )
                 raw.setdefault(
                     key,
@@ -348,7 +349,7 @@ class MockBackend:
             return Answers.from_response(payload, latency_ms=3.0)
 
         rng = random.Random("jevkit|" + _stable_state_key(state))
-        answers: dict[str, Any] = {}
+        answers: dict[str, Any] = {}  # 原始 payload dict，交给 Answers.from_response 解析
         for key, q in questions.items():
             if isinstance(q, Noul):
                 answers[key] = {"type": "noul", "noul": round(rng.uniform(0.05, 0.97), 4)}
@@ -370,17 +371,17 @@ class MockBackend:
                 if self.bias:
                     raw = [v * (1 + self.bias * (n - i)) for i, v in enumerate(raw)]
                 total = sum(raw)
-                probs = {str(i): round(v / total, 4) for i, v in enumerate(raw)}
+                level_probs = {str(i): round(v / total, 4) for i, v in enumerate(raw)}
                 expected = sum(i * (v / total) for i, v in enumerate(raw))
                 legend = {str(i): text for i, text in enumerate(q.criteria)}
-                p_max = max(probs.values())
+                p_max = max(level_probs.values())
                 conf = (p_max - 1 / n) / (1 - 1 / n) if n > 1 else 1.0
                 answers[key] = {
                     "type": "score",
                     "score": round(expected, 4),
                     "confidence": round(conf, 4),
                     "legend": legend,
-                    "probabilities": probs,
+                    "probabilities": level_probs,
                 }
         return Answers.from_response({"model": self.model_name, "answers": answers}, latency_ms=3.0)
 

@@ -175,6 +175,8 @@ def compile_policy(
             )
         elif cov == 0.0:
             note = "该预算下无可自动化区间：即使阈值 1.0 错误率也超预算"
+        elif tau == 0.0:
+            note = "τ*=0：全量样本已在预算内，AUTO 档无需设卡"
         else:
             note = ""
         evidences.append(
