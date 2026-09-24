@@ -23,8 +23,8 @@ import random
 from dataclasses import dataclass, field, replace
 from typing import Any, Mapping, Sequence
 
-from .policy import Policy, decide
-from .types import (
+from ..policy.policy import Policy, decide
+from ..core.types import (
     Answers, BackendError, Choice, ChoiceAnswer, Noul, Question, Score,
 )
 

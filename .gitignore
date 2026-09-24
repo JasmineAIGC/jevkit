@@ -9,3 +9,5 @@ decisions.jsonl
 policy.lock.json
 demo-decisions.jsonl
 .coverage
+examples/data/*-decisions.jsonl
+examples/data/*policy.lock.json

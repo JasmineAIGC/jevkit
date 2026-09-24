@@ -27,7 +27,7 @@ import json
 from dataclasses import dataclass, field
 from typing import Any, Iterator, Mapping, Union
 
-from .types import Answers, Question, ValidationError, question_from_request
+from ..core.types import Answers, Question, ValidationError, question_from_request
 
 __all__ = ["LabeledExample", "read_examples", "iter_examples", "sha256_file",
            "with_predictions", "split_half"]

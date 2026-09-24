@@ -50,6 +50,8 @@ pip install 'jevkit[dev]'             # + pytest
 
 ## Quickstart
 
+The fastest way in is the tutorial in [`examples/`](./examples/README.md) — four progressive scripts that run offline on the deterministic mock backend. The CLI tour:
+
 ```bash
 jevkit demo                                    # ① three-tier routing on a mock backend
 jevkit calibrate --data labeled.jsonl          # ② per-type calibration + temperature fit
@@ -135,6 +137,32 @@ Label semantics match kev: choice → option key; noul → true/false; score →
 | `jevkit permute --data F --policy P --n-perm 6` | option-order stability: drift / KL / **policy action-flip rate** (against your thresholds, not just argmax) |
 | `jevkit compile --data F --template T --budget b` | per-gate auto-tier threshold ← `argmax coverage s.t. err ≤ b`, emits a lock file with evidence |
 | `jevkit check --data F --lock L` | new data vs lock evidence: accuracy / coverage / ECE drift; exit code 1 on drift |
+
+## Package layout
+
+The package structure mirrors the architecture — the dependency direction is strictly `core ← policy ← eval`:
+
+```
+jevkit/
+├── errors.py        exception hierarchy (shared across layers)
+├── core/            the client abstraction over POST /v1/systemone
+│   ├── types.py       Choice / Score / Noul + typed answers (kev-exact contract)
+│   └── backend.py     Backend protocol + HttpBackend (kev.serve, native permute)
+│                      + TypesafeSdkBackend (official SDK, optional) + MockBackend
+├── policy/          probability → action
+│   ├── policy.py      Tier / Gate / Policy as data + decide() pure function
+│   └── record.py      DecisionRecord + JsonlLedger (full-distribution audit log)
+├── eval/            can you trust the probability? where's the threshold?
+│   ├── data.py        kev.train-format labeled data (shared corpus for both)
+│   ├── metrics.py     ECE / Brier / logloss / coverage / budget thresholds
+│   ├── calibration.py per-type temperature scaling (split-half discipline)
+│   ├── permute.py     option-order stability incl. policy action-flip rate
+│   ├── compile.py     thresholds → evidence-bearing policy.lock + drift check
+│   └── synthetic.py   overconfident synthetic data for tests and demos
+└── cli.py           jevkit demo / calibrate / coverage / permute / compile / check
+```
+
+The public API is stable at the package root: `from jevkit import Choice, Policy, decide, make_backend, …` — subpackages are importable directly (`jevkit.core`, `jevkit.policy`, `jevkit.eval`) for users who prefer explicit layering.
 
 ## Key numbers worth memorizing
 

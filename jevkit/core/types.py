@@ -21,29 +21,16 @@ from dataclasses import dataclass, field
 from typing import Any, Mapping, Union
 
 __all__ = [
-    "JevkitError", "ValidationError", "BackendError", "PolicyError",
     "JSONContent", "Choice", "Score", "Noul", "Question",
     "ChoiceAnswer", "ScoreAnswer", "NoulAnswer", "Answers", "state_digest",
 ]
 
+from ..errors import (  # noqa: E402,F401  再导出以兼容模块内引用
+    BackendError, JevkitError, PolicyError, ValidationError,
+)
+
 # 与 kev.api.JSONContent 对齐：请求里的自由文本字段都允许任意 JSON 内容
 JSONContent = Union[str, dict, list, int, float, bool, None]
-
-
-class JevkitError(Exception):
-    """jevkit 所有异常的基类。"""
-
-
-class ValidationError(JevkitError):
-    """题目定义或响应结构不合法。"""
-
-
-class BackendError(JevkitError):
-    """后端调用失败（连接、鉴权、过载重试耗尽等）。"""
-
-
-class PolicyError(JevkitError):
-    """政策与答案不匹配（缺题、信号不可用等）。"""
 
 
 # ---------------------------------------------------------------- 请求侧：三种题

@@ -25,10 +25,10 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Mapping
 
-from .record import DecisionRecord
-from .types import (
+from ..core.types import (
     Answers, AnyAnswer, NoulAnswer, PolicyError, state_digest,
 )
+from .record import DecisionRecord
 
 __all__ = ["Signal", "Tier", "Gate", "Policy", "decide", "signal_value"]
 

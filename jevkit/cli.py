@@ -22,19 +22,17 @@ import sys
 from typing import Any
 
 from . import __version__
-from .backend import make_backend
-from .calibration import calibrate_report
-from .compile import PolicyLock, check_drift, compile_policy
-from .data import LabeledExample, read_examples, sha256_file, with_predictions
-from .metrics import (
+from .core import Choice, Noul, Score, make_backend
+from .eval import (
+    LabeledExample, PolicyLock, calibrate_report, check_drift, compile_policy,
+    overconfident_pairs, permute_report, read_examples, sha256_file,
+    with_predictions,
+)
+from .eval.metrics import (
     Pair, best_threshold, choice_logloss_mc, coverage_table,
     pairs_from_examples, score_mae,
 )
-from .permute import permute_report
-from .policy import Policy
-from .record import JsonlLedger
-from .synthetic import overconfident_pairs
-from .types import Choice, Noul, Score
+from .policy import JsonlLedger, Policy
 
 # ---------------------------------------------------------------- demo 素材
 # 与笔记《大模型之快速决策》3.4 节同源的三条工单 + 三段式政策。

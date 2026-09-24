@@ -10,7 +10,7 @@ from jevkit import (
     coverage_table, ece, fit_temperature, apply_temperature, logloss,
     pairs_from_examples, score_mae,
 )
-from jevkit.synthetic import overconfident_pairs, perfectly_calibrated_pairs
+from jevkit.eval.synthetic import overconfident_pairs, perfectly_calibrated_pairs
 from conftest import make_calibrated_examples, make_noul_examples
 
 

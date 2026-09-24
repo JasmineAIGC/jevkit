@@ -43,6 +43,8 @@ pip install 'jevkit[dev]'             # + pytest
 
 ## 三分钟上手
 
+最快的入口是 [`examples/`](./examples/README.md) 教程——四个循序渐进的脚本，mock 后端离线可跑。命令行一览：
+
 ```bash
 jevkit demo                                    # ① mock 后端跑通三段式路由
 jevkit calibrate --data labeled.jsonl          # ② 分题型校准体检 + 温度
@@ -101,6 +103,32 @@ label 语义与 kev 一致：choice → 选项名；noul → true/false；score 
 | `jevkit permute --data F --policy P --n-perm 6` | 打乱选项顺序：漂移 / KL / **动作翻转率**（相对政策阈值） |
 | `jevkit compile --data F --template T --budget b` | 每 gate 的 auto 档阈值 ← `argmax coverage s.t. err ≤ b`，产 lock（含证据） |
 | `jevkit check --data F --lock L` | 新数据 vs lock 证据：准确率/覆盖率/ECE 漂移检查，漂移退出码 1 |
+
+## 包结构
+
+包结构与三层架构一一对应，依赖方向严格为 `core ← policy ← eval`：
+
+```
+jevkit/
+├── errors.py        异常层级（跨层共享）
+├── core/            /v1/systemone 的客户端抽象
+│   ├── types.py       Choice / Score / Noul 三原语 + 类型化答案（kev 精确契约）
+│   └── backend.py     Backend 协议 + HttpBackend（kev.serve，原生 permute）
+│                      + TypesafeSdkBackend（官方 SDK，可选）+ MockBackend
+├── policy/          概率 → 动作
+│   ├── policy.py      Tier / Gate / Policy 数据 + decide() 纯函数
+│   └── record.py      DecisionRecord + JsonlLedger（完整概率审计日志）
+├── eval/            概率可信吗？阈值在哪？
+│   ├── data.py        kev.train 格式标注数据（一份语料两用）
+│   ├── metrics.py     ECE / Brier / logloss / 覆盖率 / 预算选阈值
+│   ├── calibration.py 分题型温度缩放（对半分割纪律）
+│   ├── permute.py     选项顺序稳定性（含政策动作翻转率）
+│   ├── compile.py     阈值 → 带证据的 policy.lock + 漂移检查
+│   └── synthetic.py   过度自信合成数据（测试与演示）
+└── cli.py           jevkit demo / calibrate / coverage / permute / compile / check
+```
+
+公共 API 在包根保持稳定：`from jevkit import Choice, Policy, decide, make_backend, …`；也可以直接导入子包（`jevkit.core` / `jevkit.policy` / `jevkit.eval`）。
 
 ## 关键数字（校准时心里要有）
 
