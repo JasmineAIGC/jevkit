@@ -5,7 +5,7 @@ Thanks for considering a contribution!
 ## Setup
 
 ```bash
-git clone https://github.com/zbloom/jevkit && cd jevkit
+git clone https://github.com/JasmineAIGC/jevkit && cd jevkit
 python3 -m venv .venv && . .venv/bin/activate   # Python >= 3.10
 pip install -e '.[dev]'
 pytest

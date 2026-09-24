@@ -156,7 +156,7 @@ jevkit/
 ## 开发
 
 ```bash
-git clone https://github.com/zbloom/jevkit && cd jevkit
+git clone https://github.com/JasmineAIGC/jevkit && cd jevkit
 python3 -m venv .venv && . .venv/bin/activate
 pip install -e '.[dev]'
 pytest                                   # 全量测试（mock 后端，无需任何服务）

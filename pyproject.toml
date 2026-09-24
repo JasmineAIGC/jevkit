@@ -9,7 +9,7 @@ description = "Jev / Kev (System One) 政策层 + 评测层统一框架：概率
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
-authors = [{ name = "zbloom" }]
+authors = [{ name = "JasmineAIGC" }]
 keywords = ["jev", "kev", "typesafe", "system-one", "llm", "policy", "calibration", "evaluation"]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -32,7 +32,7 @@ dev = ["pytest>=8"]
 jevkit = "jevkit.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/zbloom/jevkit"
+Homepage = "https://github.com/JasmineAIGC/jevkit"
 
 [tool.hatch.build.targets.wheel]
 packages = ["jevkit"]

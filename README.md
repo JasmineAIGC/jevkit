@@ -3,7 +3,7 @@
 **A unified policy + evaluation framework for [Jev](https://typesafe.ai) / [Kev](https://github.com/jaredpalmer/kev) (System One) decision models.**
 Unstructured state in, typed probabilistic decisions out — **the model handles uncertainty, code handles policy**. jevkit is that code.
 
-[![CI](https://github.com/zbloom/jevkit/actions/workflows/ci.yml/badge.svg)](./.github/workflows/ci.yml)
+[![CI](https://github.com/JasmineAIGC/jevkit/actions/workflows/ci.yml/badge.svg)](./.github/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](./pyproject.toml)
 
@@ -190,7 +190,7 @@ Live-server checks run when `JEVKIT_KEV_BASE_URL` points at a running `kev.serve
 ## Development
 
 ```bash
-git clone https://github.com/zbloom/jevkit && cd jevkit
+git clone https://github.com/JasmineAIGC/jevkit && cd jevkit
 python3 -m venv .venv && . .venv/bin/activate
 pip install -e '.[dev]'
 pytest                                        # full suite, mock backends only
