@@ -26,6 +26,8 @@ import random
 import sys
 from pathlib import Path
 
+from common import demo_backend
+
 from jevkit import (
     Gate,
     JsonlLedger,
@@ -36,7 +38,6 @@ from jevkit import (
     check_drift,
     compile_policy,
     decide,
-    make_backend,
     read_examples,
     sha256_file,
 )
@@ -96,7 +97,7 @@ print()
 
 # ---------------------------------------------------------------- 3. Run with the lock
 runtime_policy = PolicyLock.load(str(lock_path)).policy
-backend = make_backend("mock")
+backend = demo_backend()
 ledger = JsonlLedger(str(DATA_DIR / "04-decisions.jsonl"))
 for ex in examples[:5]:
     answers = backend.ask(ex.state, ex.questions, model="mock-1.0")

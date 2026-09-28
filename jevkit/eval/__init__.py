@@ -6,10 +6,15 @@
 """
 
 from .calibration import (  # noqa: F401
+    SPLIT_SHUFFLE_SEED,
     CalibrationReport,
     apply_temperature,
+    apply_temperature_mc,
     calibrate_report,
     fit_temperature,
+    fit_temperature_mc,
+    mc_nll,
+    mc_rows_from_examples,
 )
 from .compile import DriftReport, PolicyLock, check_drift, compile_policy  # noqa: F401
 from .data import (  # noqa: F401

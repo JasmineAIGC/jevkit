@@ -14,10 +14,11 @@
     backend = make_backend("http://127.0.0.1:8009")   # kev.serve；或 typesafe://… / mock
     answers = backend.ask(state, questions, model="kev-latest")
     policy = Policy.from_json(policy_dict)
-    record = decide(answers, policy, state=state, state_ref="ticket-42")
+    record = decide(answers, policy, state=state, state_ref="ticket-42",
+                question_set_version="triage-questions-v1")
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 from .core import (  # noqa: F401
     Answers,
@@ -46,6 +47,7 @@ from .errors import (  # noqa: F401
     ValidationError,
 )
 from .eval import (  # noqa: F401
+    SPLIT_SHUFFLE_SEED,
     CalibrationReport,
     DriftReport,
     LabeledExample,
@@ -53,6 +55,7 @@ from .eval import (  # noqa: F401
     PolicyLock,
     accuracy,
     apply_temperature,
+    apply_temperature_mc,
     best_threshold,
     brier,
     calibrate_report,
@@ -62,8 +65,11 @@ from .eval import (  # noqa: F401
     coverage_table,
     ece,
     fit_temperature,
+    fit_temperature_mc,
     iter_examples,
     logloss,
+    mc_nll,
+    mc_rows_from_examples,
     overconfident_pairs,
     pairs_from_examples,
     perfectly_calibrated_pairs,

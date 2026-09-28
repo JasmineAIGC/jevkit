@@ -34,7 +34,9 @@ from ..core.types import (
 )
 from .record import DecisionRecord
 
-__all__ = ["Signal", "Tier", "Gate", "Policy", "decide", "signal_value"]
+POLICY_SCHEMA = 1  # 政策 JSON 的格式版本：行为变更时递增
+
+__all__ = ["Signal", "Tier", "Gate", "Policy", "decide", "signal_value", "POLICY_SCHEMA"]
 
 
 class Signal(Enum):
@@ -133,6 +135,7 @@ class Policy:
     # ---- JSON 往返（compile 产物与手写政策完全同构） ----
     def to_json(self) -> dict:
         return {
+            "schema": POLICY_SCHEMA,
             "version": self.version,
             "gates": [
                 {
@@ -146,6 +149,12 @@ class Policy:
 
     @staticmethod
     def from_json(data: Mapping[str, Any]) -> Policy:
+        schema = data.get("schema", 1)  # 旧格式无 schema 字段视为 1
+        if schema > POLICY_SCHEMA:
+            raise PolicyError(
+                "政策 JSON 是 schema v%s，本版 jevkit 只支持到 v%s——请升级 jevkit"
+                % (schema, POLICY_SCHEMA)
+            )
         gates = tuple(
             Gate(
                 question=g["question"],
@@ -167,13 +176,14 @@ def decide(
     backend_name: str = "",
     state_ref: str = "",
     state: Any = None,
-    question_set_version: str = "questions-untitled",
+    question_set_version: str,
     question_set: Mapping[str, Any] | None = None,
 ) -> DecisionRecord:
     """纯函数：类型化答案 + 政策 → 决策记录（含完整审计上下文）。
 
     state 与 state_ref 至少给一个（日志要能回到现场）；
-    question_set 不给时用 answers.raw 的键名做最小记录。
+    question_set_version 必填——版本号是决策日志可审计的前提，
+    不允许静默写出无名题集；question_set 不给时用 answers.raw 的键名做最小记录。
     """
     if state is None and not state_ref:
         raise PolicyError("decide 需要 state 或 state_ref 之一（决策日志必须可回溯）")

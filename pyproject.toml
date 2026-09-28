@@ -27,7 +27,7 @@ dependencies = []
 
 [project.optional-dependencies]
 typesafe = ["typesafe-sdk>=0.7"]
-dev = ["pytest>=8", "ruff>=0.8"]
+dev = ["pytest>=8", "ruff>=0.8", "mypy>=1.13"]
 
 [project.scripts]
 jevkit = "jevkit.cli:main"
@@ -64,5 +64,7 @@ known-first-party = ["jevkit"]
 python_version = "3.10"
 
 [[tool.mypy.overrides]]
+# SDK 的静态存根比其运行时契约（任意 JSON 内容）窄，跳过跟随以免误报
 module = "typesafe_sdk"
 ignore_missing_imports = true
+follow_imports = "skip"

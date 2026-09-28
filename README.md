@@ -132,7 +132,7 @@ Label semantics match kev: choice → option key; noul → true/false; score →
 | command | what it does |
 |---|---|
 | `jevkit demo` | three-tier routing on a mock backend; writes `demo-decisions.jsonl` |
-| `jevkit calibrate --data F` | per-type ECE / Brier / LogLoss + temperature fit (split-half, no in-sample self-deception) |
+| `jevkit calibrate --data F` | per-type ECE / Brier / LogLoss + temperature fit (split-half, order-insensitive; multinomial temperature for choice) |
 | `jevkit coverage --data F --budget 0.05` | coverage–accuracy table; automatable fraction and optimal threshold under an error budget |
 | `jevkit permute --data F --policy P --n-perm 6` | option-order stability: drift / KL / **policy action-flip rate** (against your thresholds, not just argmax) |
 | `jevkit compile --data F --template T --budget b` | per-gate auto-tier threshold ← `argmax coverage s.t. err ≤ b`, emits a lock file with evidence |

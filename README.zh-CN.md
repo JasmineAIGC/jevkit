@@ -98,7 +98,7 @@ label 语义与 kev 一致：choice → 选项名；noul → true/false；score 
 | 命令 | 作用 |
 |---|---|
 | `jevkit demo` | mock 后端跑通三段式路由，产出 `demo-decisions.jsonl` |
-| `jevkit calibrate --data F` | 分题型 ECE / Brier / LogLoss + 温度拟合（对半分割防自欺） |
+| `jevkit calibrate --data F` | 分题型 ECE / Brier / LogLoss + 温度拟合（对半分割、与行序无关；choice 题另报多类温度） |
 | `jevkit coverage --data F --budget 0.05` | 覆盖率—准确率表；错误预算下可自动化比例与最优阈值 |
 | `jevkit permute --data F --policy P --n-perm 6` | 打乱选项顺序：漂移 / KL / **动作翻转率**（相对政策阈值） |
 | `jevkit compile --data F --template T --budget b` | 每 gate 的 auto 档阈值 ← `argmax coverage s.t. err ≤ b`，产 lock（含证据） |

@@ -6,7 +6,7 @@ real service: shared fixtures and policy from common.py, a one-line
 backend switch, decide() + ledger, done.
 
 切后端只改一行：
-    backend = make_backend("mock", fixtures=TRIAGE_FIXTURES)   # 测试 / demo
+    backend = demo_backend(TRIAGE_FIXTURES)   # 测试 / demo
     backend = make_backend("http://127.0.0.1:8009")            # 本地 kev serve
     backend = make_backend("typesafe://jev-1.13.0")            # 官方托管（锁定版本！）
 """
@@ -14,11 +14,11 @@ backend switch, decide() + ledger, done.
 import sys
 from pathlib import Path
 
-from common import TRIAGE_FIXTURES, TRIAGE_QUESTIONS, TRIAGE_SAMPLES, triage_policy
+from common import TRIAGE_FIXTURES, TRIAGE_QUESTIONS, TRIAGE_SAMPLES, demo_backend, triage_policy
 
-from jevkit import JsonlLedger, decide, make_backend
+from jevkit import JsonlLedger, decide
 
-backend = make_backend("mock", fixtures=TRIAGE_FIXTURES)
+backend = demo_backend(TRIAGE_FIXTURES)
 # backend = make_backend("http://127.0.0.1:8009")            # kev: python -m kev.serve ...
 # backend = make_backend("typesafe://jev-1.13.0")            # 生产：锁版本 + TYPESAFE_API_KEY
 

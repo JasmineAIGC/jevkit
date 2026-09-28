@@ -101,3 +101,14 @@ def triage_policy() -> Policy:
             ),
         ),
     )
+
+
+def demo_backend(fixtures: dict | None = None):
+    """All examples share this backend factory: honors JEVKIT_BACKEND /
+    JEVKIT_MODEL, defaults to the deterministic mock (with fixtures)."""
+    import os
+
+    from jevkit import make_backend
+
+    spec = os.environ.get("JEVKIT_BACKEND", "mock")
+    return make_backend(spec, fixtures=fixtures if spec == "mock" else None)

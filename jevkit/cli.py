@@ -23,11 +23,15 @@ from typing import Any
 from . import __version__
 from .core import Choice, Noul, Score, ScoreAnswer, make_backend
 from .eval import (
+    SPLIT_SHUFFLE_SEED,
     LabeledExample,
     PolicyLock,
     calibrate_report,
     check_drift,
     compile_policy,
+    fit_temperature_mc,
+    mc_nll,
+    mc_rows_from_examples,
     overconfident_pairs,
     permute_report,
     read_examples,
@@ -253,6 +257,20 @@ def _print_calibrate(
         % (acc_label, report.before["accuracy"] * 100, report.after["accuracy"] * 100)
     )
     print("  参考：二分类瞎猜 log loss = ln2 = %.3f；接近它说明概率几乎没有信息量" % math.log(2))
+    if examples is not None and qtype == "choice":
+        import random as _random
+
+        rows = mc_rows_from_examples(
+            [(ex.answers, ex.labels) for ex in examples if ex.answers], name
+        )
+        if len(rows) >= 20:
+            _random.Random(SPLIT_SHUFFLE_SEED).shuffle(rows)
+            half = len(rows) // 2
+            t_mc, _ = fit_temperature_mc(rows[:half])
+            print(
+                "  choice 多类温度 T_mc = %.3f：分布 NLL %.4f → %.4f（softmax(log p / T)，保序）"
+                % (t_mc, mc_nll(rows[half:], 1.0), mc_nll(rows[half:], t_mc))
+            )
     if examples is not None:
         if qtype == "score":
             print(

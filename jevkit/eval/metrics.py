@@ -117,21 +117,29 @@ def best_threshold(
 ) -> tuple[float, float, float]:
     """错误预算下选阈值：τ* = argmax coverage s.t. error(τ) ≤ budget。
 
+    候选集是**观测到的信号值本身**——覆盖率曲线是阶跃函数，只在观测值处
+    跳变，因此这样既精确（不会错过 0.975 这类非整数断点）又快（一次排序
+    单遍扫描，O(n log n)），替代原先的整数百分点网格。
+
     返回 (τ*, coverage, accuracy)。找不到满足预算的阈值时返回 (1.0, 0.0, nan)——
     这个信号本身就是结论：当前题型/模型撑不起这个自动化预算。
     """
     n = len(pairs)
     if n == 0:
         return (1.0, 0.0, float("nan"))
+    ordered = sorted(pairs, key=lambda x: -x[0])
     best = (1.0, 0.0, float("nan"))
-    for i in range(0, 100):
-        thr = i / 100
-        sub = [x for x in pairs if x[0] >= thr]
-        if len(sub) < n * min_coverage:
+    i, cum_ok = 0, 0
+    for thr in sorted({p for p, _ in pairs}, reverse=True):
+        while i < n and ordered[i][0] >= thr:
+            if ordered[i][1]:
+                cum_ok += 1
+            i += 1
+        if i < n * min_coverage:
             continue
-        acc = sum(1 for _, y in sub if y) / len(sub)
-        if 1 - acc <= budget and len(sub) / n > best[1]:
-            best = (thr, len(sub) / n, acc)
+        acc = cum_ok / i
+        if 1 - acc <= budget and i / n > best[1]:
+            best = (float(thr), i / n, acc)
     return best
 
 

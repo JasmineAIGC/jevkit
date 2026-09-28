@@ -13,7 +13,13 @@ Run:  python examples/02_policy_and_ledger.py
 import sys
 from pathlib import Path
 
-from common import TRIAGE_FIXTURES, TRIAGE_QUESTIONS, TRIAGE_SAMPLES, triage_policy
+from common import (
+    TRIAGE_FIXTURES,
+    TRIAGE_QUESTIONS,
+    TRIAGE_SAMPLES,
+    demo_backend,
+    triage_policy,
+)
 
 from jevkit import (
     Answers,
@@ -24,7 +30,6 @@ from jevkit import (
     Signal,
     Tier,
     decide,
-    make_backend,
 )
 
 # ---------------------------------------------------------------- 1. Policy
@@ -37,15 +42,15 @@ POLICY = triage_policy()  # version="triage-v1"; thresholds from cost structure
 bad = Policy(
     version="bad-v1", gates=(Gate("escalate", Signal.CONFIDENCE, (Tier("A", 0.9), Tier("B", 0.0))),)
 )
-answers = make_backend("mock", fixtures=TRIAGE_FIXTURES).ask(TRIAGE_SAMPLES[0][1], TRIAGE_QUESTIONS)
+answers = demo_backend(TRIAGE_FIXTURES).ask(TRIAGE_SAMPLES[0][1], TRIAGE_QUESTIONS)
 try:
-    decide(answers, bad, state_ref="x")
+    decide(answers, bad, state_ref="x", question_set_version="t")
 except PolicyError as e:
     print("blocked by design: %s" % e)
 print()
 
 # ---------------------------------------------------------------- 3. Decide + ledger
-backend = make_backend("mock", fixtures=TRIAGE_FIXTURES)
+backend = demo_backend(TRIAGE_FIXTURES)
 ledger = JsonlLedger(str(Path(__file__).parent / "data" / "02-decisions.jsonl"))
 
 for ref, state in TRIAGE_SAMPLES:
@@ -71,7 +76,12 @@ for ref, state in TRIAGE_SAMPLES:
 first = list(ledger)[0]
 print("replayed %r from the ledger:" % first.state_ref)
 replayed_answers = Answers.from_response({"model": first.model, "answers": first.raw})
-replayed = decide(replayed_answers, Policy.from_json(first.policy), state_ref=first.state_ref)
+replayed = decide(
+    replayed_answers,
+    Policy.from_json(first.policy),
+    state_ref=first.state_ref,
+    question_set_version=first.question_set_version,
+)
 print("  actions identical:", replayed.actions == first.actions)
 
 print()

@@ -13,6 +13,9 @@ noul 无候选，跳过。
 实现：后端是 kev 服务（HttpBackend）时走原生端点 POST /v1/systemone/permute
 ——一次转发在服务端跑多种顺序，省 token 也省往返；其他后端（官方 TypeSafe、
 mock）客户端打乱题集逐次重问。两条路径产出同构的 PermuteResult。
+
+注意：kev 原生端点的 run[0] 是未打乱的原始顺序（对照用），因此翻转率的
+分母里含一次恒等排列——读数略偏保守（往低了估），判断"是否为零"不受影响。
 """
 
 from __future__ import annotations

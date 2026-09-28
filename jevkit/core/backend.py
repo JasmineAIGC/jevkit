@@ -96,7 +96,8 @@ class HttpBackend:
             req = urllib.request.Request(url, data=body, headers=headers, method="POST")
             try:
                 with urllib.request.urlopen(req, timeout=timeout) as resp:
-                    return json.loads(resp.read().decode("utf-8")), dict(resp.headers)
+                    body = resp.read().decode("utf-8")
+                    headers_out = dict(resp.headers)
             except urllib.error.HTTPError as e:
                 try:
                     detail = e.read().decode("utf-8", "ignore")[:500]
@@ -117,6 +118,13 @@ class HttpBackend:
                     "uv run --extra serve python -m kev.serve --run jaredpalmer/kev-4b --port 8009"
                     % (url, e.reason)
                 ) from e
+            try:
+                return json.loads(body), headers_out
+            except ValueError as e:
+                body_preview = (
+                    body[:120].decode("utf-8", "ignore") if isinstance(body, bytes) else body[:120]
+                )
+                raise BackendError("响应不是合法 JSON（%s）：%s…" % (url, body_preview)) from e
         raise BackendError("重试耗尽：%r" % (last_err,))
 
     def ask(
@@ -423,8 +431,13 @@ def make_backend(spec: str, **kwargs: Any) -> Backend:
         fixtures = kwargs.pop("fixtures", None)
         if fixtures is None and spec.startswith("mock://") and len(spec) > 7:
             path = spec[len("mock://") :]
-            with open(path, encoding="utf-8") as f:
-                fixtures = json.load(f)
+            try:
+                with open(path, encoding="utf-8") as f:
+                    fixtures = json.load(f)
+            except OSError as e:
+                raise BackendError("mock 夹具文件读取失败：%s（%s）" % (path, e)) from e
+            except ValueError as e:
+                raise BackendError("mock 夹具不是合法 JSON：%s（%s）" % (path, e)) from e
         return MockBackend(fixtures=fixtures, **kwargs)
     if spec.startswith(("http://", "https://")):
         return HttpBackend(base_url=spec, **kwargs)

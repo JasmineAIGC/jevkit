@@ -18,6 +18,8 @@ Run:  python examples/make_example_data.py   # first, if data/ is missing
 import sys
 from pathlib import Path
 
+from common import demo_backend
+
 from jevkit import (
     Gate,
     Policy,
@@ -25,7 +27,6 @@ from jevkit import (
     Tier,
     best_threshold,
     calibrate_report,
-    make_backend,
     pairs_from_examples,
     permute_state,
     read_examples,
@@ -100,7 +101,7 @@ policy = Policy(
     ),
 )
 results = permute_state(
-    make_backend("mock"), examples[0].state, questions, policy=policy, n_perm=5, model="mock-1.0"
+    demo_backend(), examples[0].state, questions, policy=policy, n_perm=5, model="mock-1.0"
 )
 for name, r in results.items():
     print("  %-12s %-7s %s" % (name, r.qtype, r.verdict))

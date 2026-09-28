@@ -126,6 +126,6 @@ class TestCheckDrift:
                 "escalate": NoulAnswer(0.05),
             },
         )
-        rec = decide(a, policy, state_ref="t", state="s")
+        rec = decide(a, policy, state_ref="t", state="s", question_set_version="t")
         assert rec.actions["department"]["action"] == "AUTO"
         assert rec.actions["escalate"]["action"] in ("NORMAL", "DEFER")

@@ -91,24 +91,48 @@ class TestSignalGuards:
 
 class TestDecideBoundaries:
     def test_auto_at_exact_threshold(self):
-        rec = decide(answers_for(conf=0.70), triage_policy(), state_ref="t1", state="s")
+        rec = decide(
+            answers_for(conf=0.70),
+            triage_policy(),
+            state_ref="t1",
+            state="s",
+            question_set_version="t",
+        )
         assert rec.actions["department"]["action"] == "AUTO"  # ≥ 即命中
 
     def test_just_below_auto_is_defer(self):
-        rec = decide(answers_for(conf=0.699), triage_policy(), state_ref="t2", state="s")
+        rec = decide(
+            answers_for(conf=0.699),
+            triage_policy(),
+            state_ref="t2",
+            state="s",
+            question_set_version="t",
+        )
         assert rec.actions["department"]["action"] == "DEFER"
 
     def test_alert_tier(self):
-        rec = decide(answers_for(noul=0.93), triage_policy(), state_ref="t3", state="s")
+        rec = decide(
+            answers_for(noul=0.93),
+            triage_policy(),
+            state_ref="t3",
+            state="s",
+            question_set_version="t",
+        )
         assert rec.actions["escalate"]["action"] == "ALERT"
 
     def test_normal_tier(self):
-        rec = decide(answers_for(noul=0.30), triage_policy(), state_ref="t4", state="s")
+        rec = decide(
+            answers_for(noul=0.30),
+            triage_policy(),
+            state_ref="t4",
+            state="s",
+            question_set_version="t",
+        )
         assert rec.actions["escalate"]["action"] == "NORMAL"
 
     def test_state_or_ref_required(self):
         with pytest.raises(PolicyError, match="state_ref"):
-            decide(answers_for(), triage_policy())
+            decide(answers_for(), triage_policy(), question_set_version="t")
 
 
 class TestRecord:
@@ -148,11 +172,15 @@ class TestRecord:
         p = triage_policy()
         p2 = Policy.from_json(p.to_json())
         assert p2.to_json() == p.to_json()
-        rec = decide(answers_for(), p2, state_ref="x", state="y")
+        rec = decide(answers_for(), p2, state_ref="x", state="y", question_set_version="t")
         assert rec.actions["department"]["action"] == "AUTO"
 
     def test_determinism(self):
-        r1 = decide(answers_for(), triage_policy(), state_ref="a", state="s")
-        r2 = decide(answers_for(), triage_policy(), state_ref="a", state="s")
+        r1 = decide(
+            answers_for(), triage_policy(), state_ref="a", state="s", question_set_version="t"
+        )
+        r2 = decide(
+            answers_for(), triage_policy(), state_ref="a", state="s", question_set_version="t"
+        )
         assert r1.actions == r2.actions
         assert r1.state_sha256 == r2.state_sha256
