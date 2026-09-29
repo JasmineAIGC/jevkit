@@ -24,5 +24,6 @@ from .types import (  # noqa: F401
     ScoreAnswer,
     parse_answer,
     parse_question,
+    score_confidence,
     state_digest,
 )

@@ -136,3 +136,32 @@ class TestMakeBackend:
     def test_unknown_spec(self):
         with pytest.raises(BackendError, match="无法识别"):
             make_backend("ftp://nope")
+
+
+class TestScoreConfidenceFormula:
+    """kev #139 的 uniform-MAD 归一化（MockBackend 与文档都依赖它）。"""
+
+    def test_one_hot_is_one(self):
+        from jevkit import score_confidence
+
+        assert score_confidence([0.0, 1.0]) == 1.0
+        assert score_confidence([0.0, 0.0, 1.0]) == 1.0
+
+    def test_uniform_is_zero(self):
+        from jevkit import score_confidence
+
+        assert score_confidence([0.5, 0.5]) == 0.0
+        assert score_confidence([1 / 3, 1 / 3, 1 / 3]) == pytest.approx(0.0, abs=1e-9)
+
+    def test_known_middle_value_matches_kev(self):
+        # kev 实现的中间值：L=2, D=0.5, E|level-mode|=0.3 → 1-0.3/0.5=0.4
+        from jevkit import score_confidence
+
+        assert score_confidence([0.7, 0.3]) == pytest.approx(0.4)
+        # L=3, D=2/3：1 - 0.75/(2/3) = -0.125 → 负值截为 0（kev 的 max(0, …)）
+        assert score_confidence([0.45, 0.35, 0.2]) == 0.0
+
+    def test_unnormalized_input_handled(self):
+        from jevkit import score_confidence
+
+        assert score_confidence([7, 3]) == pytest.approx(0.4)

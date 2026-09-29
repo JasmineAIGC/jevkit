@@ -74,6 +74,8 @@ uv sync --extra serve
 uv run --extra serve python -m kev.serve --run jaredpalmer/kev-4b --port 8009
 ```
 
+模型家族从 `kev-0.5b` 到 `kev-9b`，新发布 **`kev-27b`**（Qwen3.8-27B 底座）。长文档场景选型差异显著：问题埋在 1k–6k token 干扰文本中时，Kev-27B 得 0.833、Kev-9B 仅 0.556。服务端接受 64k token 的 state（训练只用了 384），超长输入能跑，但超出训练上下文后准确率的保持正是大模型的价值所在。
+
 **注意**：kev 校准落后于 Jev（5% 预算下可自动化比例 0.45–0.57 vs 0.70），**阈值不可跨模型迁移**——换模型必须重新编译。
 
 ## 数据格式（与 kev.train 共享）
@@ -140,7 +142,7 @@ jevkit/
 | 分题型校准误差 | Noul 0.012 / Choice 0.086 / Score 0.254 |
 | 5% 错误预算可自动化 | Jev 0.70；Kev-9B 0.45–0.57 |
 | 一致率 | Kev-9B base 66.4% → Nimble 90.1% → Jev 93.2%（324 条 held-out） |
-| 上下文 | 总 64k；state + 最长问题 ≤ 32k（kev serving 仅 8k） |
+| 上下文 | 总 64k；state + 最长问题 ≤ 32k（kev serving：state 64k + 每题 8k；训练仅 384 token） |
 | 版本 | 生产锁 `jev-1.13.0`；`-latest` 漂移会悄悄跨过阈值 |
 
 ## 兼容性验证

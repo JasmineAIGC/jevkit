@@ -29,6 +29,7 @@ from .types import (
     Question,
     Score,
     ValidationError,
+    score_confidence,
 )
 
 __all__ = ["Backend", "HttpBackend", "TypesafeSdkBackend", "MockBackend", "make_backend"]
@@ -142,9 +143,13 @@ class HttpBackend:
             "/v1/systemone", self._payload(state, questions, model), timeout
         )
         answers = Answers.from_response(payload, latency_ms=(time.monotonic() - start) * 1000)
-        if answers.request_id is None:
-            # kev 与 TypeSafe 都把请求 ID 放在 x-typesafe-request-id 响应头
-            answers = replace(answers, request_id=resp_headers.get("x-typesafe-request-id"))
+        # kev 与 TypeSafe 都把请求 ID 放在 x-typesafe-request-id 响应头；
+        # kev 另外暴露 server-timing（各阶段耗时，观测用）
+        answers = replace(
+            answers,
+            request_id=answers.request_id or resp_headers.get("x-typesafe-request-id"),
+            server_timing=resp_headers.get("server-timing"),
+        )
         return answers
 
     # kev 独有扩展：POST /v1/systemone/permute（一次转发跑多种选项顺序）
@@ -382,8 +387,7 @@ class MockBackend:
                 level_probs = {str(i): round(v / total, 4) for i, v in enumerate(raw)}
                 expected = sum(i * (v / total) for i, v in enumerate(raw))
                 legend = {str(i): text for i, text in enumerate(q.criteria)}
-                p_max = max(level_probs.values())
-                conf = (p_max - 1 / n) / (1 - 1 / n) if n > 1 else 1.0
+                conf = score_confidence(list(level_probs.values()))
                 answers[key] = {
                     "type": "score",
                     "score": round(expected, 4),

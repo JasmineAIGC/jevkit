@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -30,6 +30,7 @@ __all__ = [
     "ScoreAnswer",
     "NoulAnswer",
     "Answers",
+    "score_confidence",
     "state_digest",
 ]
 
@@ -42,6 +43,25 @@ from ..errors import (  # noqa: E402,F401  再导出以兼容模块内引用
 
 # 与 kev.api.JSONContent 对齐：请求里的自由文本字段都允许任意 JSON 内容
 JSONContent = str | dict | list | int | float | bool | None
+
+
+def score_confidence(p: Sequence[float]) -> float:
+    """score 题的 confidence —— kev #139 的 uniform-MAD 归一化：
+
+        max(0, 1 − E|level − mode| / D)，D = 均匀分布对均值的平均绝对偏差
+
+    与 choice 的 (p_max − 1/K)/(1 − 1/K) 不同：均匀分布时 score confidence
+    为 0（choice 公式对 K=2 的均匀分布也恰为 0，但中间形态两者数值不同）。
+    kev 在计算前会先归一化概率（_normalize）。
+    """
+    L = len(p)
+    if L == 1:
+        return 1.0
+    total = sum(p)
+    p = [v / total for v in p]
+    mode = max(range(L), key=p.__getitem__)
+    d = sum(abs(i - (L - 1) / 2) for i in range(L)) / L
+    return max(0.0, 1.0 - sum(pi * abs(i - mode) for i, pi in enumerate(p)) / d)
 
 
 # ---------------------------------------------------------------- 请求侧：三种题
@@ -244,6 +264,7 @@ class Answers:
     input_tokens: int | None = None
     output_tokens: int | None = None
     latency_ms: float | None = None
+    server_timing: str | None = None  # kev 的 server-timing 响应头（观测用）
 
     @staticmethod
     def from_response(payload: Mapping[str, Any], latency_ms: float | None = None) -> Answers:

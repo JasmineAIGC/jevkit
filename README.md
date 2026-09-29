@@ -108,6 +108,8 @@ uv sync --extra serve
 uv run --extra serve python -m kev.serve --run jaredpalmer/kev-4b --port 8009
 ```
 
+The family spans `kev-0.5b` … `kev-9b` and the newly released **`kev-27b`** (Qwen3.8-27B). For long documents the size matters: with the question buried in 1k–6k tokens of distractor text, Kev-27B scores 0.833 vs Kev-9B's 0.556. The server accepts 64k-token states (training used 384), so long inputs work — accuracy beyond the training context is where the bigger models earn their memory.
+
 **Note:** kev's calibration trails hosted Jev (automatable fraction under a 5% error budget: 0.45–0.57 vs 0.70), so **thresholds do not transfer across models** — recompile on new data when you switch.
 
 ## Data format (shared with kev.train)
@@ -174,7 +176,7 @@ The public API is stable at the package root: `from jevkit import Choice, Policy
 | per-type calibration error | Noul 0.012 / Choice 0.086 / Score 0.254 |
 | automatable @ 5% error budget | Jev 0.70; Kev-9B 0.45–0.57 |
 | agreement | Kev-9B base 66.4% → Nimble 90.1% → Jev 93.2% (324 held-out) |
-| context | 64k total; state + longest question ≤ 32k (kev serving: 8k) |
+| context | 64k total; state + longest question ≤ 32k (kev serving: 64k state + 8k per question; training used 384) |
 | versions | pin `jev-1.13.0` in production; `-latest` drift silently crosses thresholds |
 
 ## Compatibility & verification

@@ -4,6 +4,31 @@ All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-09-29
+
+Sync with kev upstream (checked against jaredpalmer/kev @ 2026-09-29).
+
+### Changed
+
+- score confidence now follows kev #139's uniform-MAD normaliser —
+  `score_confidence(p) = max(0, 1 − E|level−mode| / D)` with D the mean
+  absolute deviation of a uniform distribution — exposed as a public helper
+  and used by `MockBackend` (previously it borrowed the choice formula);
+  example data regenerated with the new values. Endpoint/response/data
+  contracts verified unchanged.
+
+### Added
+
+- `Answers.server_timing`: `HttpBackend` now captures kev's `server-timing`
+  response header for observability (request-id capture extended likewise).
+- READMEs: kev context updated (server accepts 64k-token states + 8k per
+  question, training used 384) and the model family (kev-0.5b … kev-9b,
+  newly released kev-27b; long-document accuracy 0.833 vs 0.556 for Kev-9B).
+
+### Housekeeping
+
+- typesafe-sdk floor verified against 0.7.2 (adapter smoke-tested).
+
 ## [0.2.0] - 2026-09-28
 
 Performance, statistical rigor, and robustness pass from a full audit.
@@ -65,5 +90,6 @@ Initial release.
 - **compat** — contract tests against real kev source code (`KEV_SRC`), live-server
   tests (`JEVKIT_KEV_BASE_URL`), bilingual READMEs, MIT license, GitHub Actions CI.
 
+[0.3.0]: https://github.com/JasmineAIGC/jevkit/releases/tag/v0.3.0
 [0.2.0]: https://github.com/JasmineAIGC/jevkit/releases/tag/v0.2.0
 [0.1.0]: https://github.com/JasmineAIGC/jevkit/releases/tag/v0.1.0

@@ -18,7 +18,7 @@
                 question_set_version="triage-questions-v1")
 """
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 from .core import (  # noqa: F401
     Answers,
@@ -38,6 +38,7 @@ from .core import (  # noqa: F401
     make_backend,
     parse_answer,
     parse_question,
+    score_confidence,
     state_digest,
 )
 from .errors import (  # noqa: F401

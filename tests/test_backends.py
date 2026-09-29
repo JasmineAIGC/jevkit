@@ -99,6 +99,8 @@ class _CannedHandler(BaseHTTPRequestHandler):
         data = json.dumps(resp).encode()
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
+        self.send_header("x-typesafe-request-id", "req-1")
+        self.send_header("server-timing", "prefill;dur=12")
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()
         self.wfile.write(data)
@@ -123,6 +125,8 @@ class TestHttpBackend:
             assert _CannedHandler.attempts == 3  # 两次 429 + 一次成功
             assert answers.answers["department"].choice == "billing"
             assert answers.model == "kev-latest"
+            assert answers.request_id == "req-1"  # x-typesafe-request-id
+            assert answers.server_timing == "prefill;dur=12"
         finally:
             server.shutdown()
 
