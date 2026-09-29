@@ -17,12 +17,23 @@ or behind a lazy import with a helpful error message.
 
 ## Before you open a PR
 
+CI enforces all of these (`ruff check` + `ruff format --check` + `mypy` +
+pytest on Python 3.10–3.13); running them locally first saves a round trip:
+
+```bash
+ruff check jevkit/ examples/ tests/
+ruff format --check jevkit/ examples/ tests/
+mypy jevkit/
+pytest
+```
+
 1. **Tests must pass**: `pytest` (mock backends only, no network needed).
 2. **New behavior needs a test.** Policy and metric code is deliberately pure
    and deterministic — numeric assertions are expected, not bonus.
 3. **Keep the contract honest.** Anything touching the request/response shape
    should be checked against kev's actual source (`kev/api.py`) via
-   `tests/test_kev_compat.py` (`KEV_SRC=/path/to/kev`).
+   `tests/test_kev_compat.py` (`KEV_SRC=/path/to/kev`). kev moves daily —
+   when in doubt, re-run the contract tests against a fresh clone.
 4. **Docs are bilingual.** README.md is English (primary); README.zh-CN.md is
    the Chinese counterpart. Update both when you change user-facing behavior.
 5. Code comments and docstrings may be Chinese or English; match the file you
